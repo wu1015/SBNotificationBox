@@ -4,7 +4,7 @@ plugins {
 
 android {
     namespace = "com.wu1015.sbnotificationbox"
-    compileSdk = 34
+    compileSdk = 35
 
     defaultConfig {
         applicationId = "com.wu1015.sbnotificationbox"
