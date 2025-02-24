@@ -2,16 +2,25 @@ package com.wu1015.sbnotificationbox.notification;
 
 import android.annotation.SuppressLint;
 import android.app.Notification;
+import android.appwidget.AppWidgetManager;
+import android.content.ComponentName;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.service.notification.NotificationListenerService;
 import android.service.notification.StatusBarNotification;
+import android.widget.RemoteViews;
 import android.widget.Toast;
 import android.content.Context;
 
 
+import com.wu1015.sbnotificationbox.R;
+
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -37,6 +46,9 @@ public class MyNotificationListenerService extends NotificationListenerService {
 
 //        将通知内容追加写入文件
         appendToFile(appName, notificationTime, notificationTitle, notificationText);
+
+//        收到通知后更新小部件
+        updateWidget(getApplicationContext(), readFileContent());
     }
 
     @Override
@@ -67,7 +79,7 @@ public class MyNotificationListenerService extends NotificationListenerService {
             writer = new OutputStreamWriter(fos);
 
 //            追加写入内容
-            String logEntry = notificationTime+appName + " Title: " + title + "\nText: " + text + "\n\n";
+            String logEntry = notificationTime + " " + appName + " Title: " + title + "\nText: " + text + "\n\n";
             writer.write(logEntry);
 
         } catch (IOException e) {
@@ -104,5 +116,51 @@ public class MyNotificationListenerService extends NotificationListenerService {
 //        将时间戳转换为可读的日期格式
         @SuppressLint("SimpleDateFormat") SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
         return sdf.format(new Date(postTime)); // 格式化为日期时间字符串
+    }
+
+//    收到通知更新小部件
+    private void updateWidget(Context context, String text) {
+        AppWidgetManager appWidgetManager = AppWidgetManager.getInstance(context);
+        ComponentName thisWidget = new ComponentName(context, NotificationWidgetProvider.class);
+
+        // 更新小部件的内容
+        RemoteViews views = new RemoteViews(context.getPackageName(), R.layout.widget_layout);
+        views.setTextViewText(R.id.notification_text, text);  // 设置文本内容
+
+        appWidgetManager.updateAppWidget(thisWidget, views);  // 更新小部件
+    }
+
+    private String readFileContent() {
+        String content = "";
+        FileInputStream fis = null;
+        try {
+            @SuppressLint("SimpleDateFormat") SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd"); // 文件名格式为：yyyyMMdd
+            String currentDate = sdf.format(new Date()); // 获取当前日期
+            String fileName = currentDate + "_notifications_log.md";  // 使用当前日期作为文件名
+            File file = new File(getApplicationContext().getFilesDir(), fileName);
+            fis = new FileInputStream(file);
+            BufferedReader reader = new BufferedReader(new InputStreamReader(fis));
+
+            StringBuilder stringBuilder = new StringBuilder();
+            String line;
+            while ((line = reader.readLine()) != null) {
+                stringBuilder.append(line).append("\n");
+            }
+
+            content = stringBuilder.toString();
+            reader.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        } finally {
+            try {
+                if (fis != null) {
+                    fis.close();
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+
+        return content;
     }
 }
