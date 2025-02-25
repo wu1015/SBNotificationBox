@@ -1,12 +1,14 @@
 package com.wu1015.sbnotificationbox.notification;
 
-import android.annotation.SuppressLint;
-import android.app.PendingIntent;
 import android.appwidget.AppWidgetProvider;
 import android.appwidget.AppWidgetManager;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
+import android.util.Log;
 import android.widget.RemoteViews;
+
+import androidx.annotation.NonNull;
 
 import com.wu1015.sbnotificationbox.R;
 
@@ -17,23 +19,52 @@ public class NotificationWidgetProvider extends AppWidgetProvider {
         super.onUpdate(context, appWidgetManager, appWidgetIds);
 
         for (int appWidgetId : appWidgetIds) {
-            // 获取保存的通知记录
-            String notificationText = getNotificationText(context);
-
-            // 创建 RemoteViews 并设置通知文本
-            @SuppressLint("RemoteViewLayout") RemoteViews views = new RemoteViews(context.getPackageName(), R.layout.widget_layout);
-            views.setTextViewText(R.id.notification_text, notificationText);
-
-
-            // 更新小部件
-            appWidgetManager.updateAppWidget(appWidgetId, views);
+            // 初始化小组件
+            updateAppWidget(context, appWidgetManager, appWidgetId);
         }
     }
 
-    // 模拟获取通知记录的功能
-    private String getNotificationText(Context context) {
-        // 可以从文件、数据库或其他存储中获取通知记录
-        // 此处使用静态文本作为示例
-        return "这是一条长通知记录，内容会自动滚动显示，若超过屏幕大小将无法完全显示，但可以滚动查看。";
+    // 初始化小组件
+    static void updateAppWidget(Context context, AppWidgetManager appWidgetManager, int appWidgetId) {
+        // 更新小部件
+        appWidgetManager.updateAppWidget(appWidgetId, getRemoteViews(context));
+    }
+
+    @NonNull
+    private static RemoteViews getRemoteViews(Context context) {
+        // 创建 RemoteViews 对象
+        RemoteViews views = new RemoteViews(context.getPackageName(), R.layout.widget_layout);
+
+        // 设置 ListView 使用 RemoteViewsService 来填充数据
+        Intent intent = new Intent(context, WidgetRemoteViewsService.class);
+        views.setRemoteAdapter(R.id.widget_listview, intent);
+        return views;
+    }
+
+    // 刷新小部件
+    public static void updateWidget(Context context) {
+        AppWidgetManager appWidgetManager = AppWidgetManager.getInstance(context);
+        ComponentName thisWidget = new ComponentName(context, NotificationWidgetProvider.class);
+
+        // 更新小部件的内容
+        RemoteViews views = getRemoteViews(context);
+
+        int[] appWidgetIds = appWidgetManager.getAppWidgetIds(thisWidget);
+
+        // 通知 Widget 更新
+        appWidgetManager.notifyAppWidgetViewDataChanged(appWidgetIds, R.id.widget_listview);
+
+        // 更新小部件
+        appWidgetManager.updateAppWidget(thisWidget, views);
+    }
+
+    // 添加数据
+    public static void addItemToWidget(MyNotification item) {
+        WidgetRemoteViewsService.addItem(item);
+    }
+
+    // 清空数据
+    public static void clearWidgetItems() {
+        WidgetRemoteViewsService.clearItems();
     }
 }

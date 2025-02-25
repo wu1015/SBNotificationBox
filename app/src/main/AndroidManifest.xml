@@ -44,6 +44,17 @@
                 android:resource="@xml/widget_info" />
         </receiver>
 
+<!--        小部件listview数据提供-->
+        <service
+            android:name=".notification.WidgetRemoteViewsService"
+            android:exported="true"
+            android:permission="android.permission.BIND_REMOTEVIEWS">
+            <intent-filter>
+                <action android:name="android.widget.RemoteViewsService" />
+            </intent-filter>
+        </service>
+
+
     </application>
 
 

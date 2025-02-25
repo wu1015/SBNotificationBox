@@ -21,6 +21,9 @@ import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 
+import com.wu1015.sbnotificationbox.notification.MyNotificationListenerService;
+import com.wu1015.sbnotificationbox.notification.NotificationWidgetProvider;
+
 import java.text.SimpleDateFormat;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -43,17 +46,19 @@ public class MainActivity extends AppCompatActivity {
             button.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
-//                设置为0时传入的参数会被覆盖(与这个无关，因为处理的是同样的intent)
-//                Android12以上PendingIntent需要强制增加FLAG_IMMUTABLE或FLAG_MUTABLE
+                    // 设置为0时传入的参数会被覆盖(与这个无关，因为处理的是同样的intent)
+                    // Android12以上PendingIntent需要强制增加FLAG_IMMUTABLE或FLAG_MUTABLE
                     Context context = getBaseContext();
                     NotificationManager mNotificationManager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
-//                创建 NotificationChannel 对象
+
+                    // 创建 NotificationChannel 对象
                     NotificationChannel channel = null;
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                         channel = new NotificationChannel("Channel_ID",
                                 "chat message", NotificationManager.IMPORTANCE_DEFAULT);
                     }
-//                创建通知渠道
+
+                    // 创建通知渠道
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                         mNotificationManager.createNotificationChannel(channel);
                     }
@@ -62,10 +67,10 @@ public class MainActivity extends AppCompatActivity {
                             .setContentText("strContext")
                             .setWhen(System.currentTimeMillis())
                             .setSmallIcon(R.drawable.ic_launcher_foreground);
-//                点击后消失
-//                    .setAutoCancel(true);
+                    // 点击后消失
+                    // .setAutoCancel(true);
 
-                    //发送通知( id唯一,可用于更新通知时对应旧通知; 通过mBuilder.build()拿到notification对象 )
+                    // 发送通知( id唯一,可用于更新通知时对应旧通知; 通过mBuilder.build()拿到notification对象 )
                     mNotificationManager.notify(1, mBuilder.build());
                 }
             });
@@ -74,7 +79,7 @@ public class MainActivity extends AppCompatActivity {
             button1.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
-//                获取当前日期并读取对应的日志文件内容
+                    // 获取当前日期并读取对应的日志文件内容
                     String currentDate = getCurrentDate();
                     String fileName = currentDate + "_notifications_log.md"; // 文件名为当前日期
 
@@ -85,8 +90,14 @@ public class MainActivity extends AppCompatActivity {
                     TextView textView = findViewById(R.id.textview);
                     textView.setText(fileContent);
 
-//                    Toast.makeText(getBaseContext(), getFilesArrayList(getBaseContext()).get(1).getFileName(), Toast.LENGTH_LONG).show();
+                    // Toast.makeText(getBaseContext(), getFilesArrayList(getBaseContext()).get(1).getFileName(), Toast.LENGTH_LONG).show();
+                    // 返回文件删除结果
                     Toast.makeText(getBaseContext(), String.valueOf(delAllFiles(getBaseContext())), Toast.LENGTH_LONG).show();
+                    // 删除小部件内容
+                    NotificationWidgetProvider.clearWidgetItems();
+                    // 更新小部件
+                    NotificationWidgetProvider.updateWidget(getBaseContext());
+
                 }
             });
             return insets;

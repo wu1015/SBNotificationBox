@@ -1,5 +1,6 @@
 package com.wu1015.sbnotificationbox.notification;
 
+// 通知文件列表实体类
 public class MyNotificationFile {
     String fileName;
     String filePath;
