@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.Objects;
 
 public class MyNotificationListenerService extends NotificationListenerService {
 
@@ -46,6 +47,12 @@ public class MyNotificationListenerService extends NotificationListenerService {
             if (packageName.equals("android")) {
                 return;
             }
+
+            // 避免获取到null
+            if (notificationTitle == null || notificationText == null){
+                return;
+            }
+
 
             // 获取通知发送的时间戳，并格式化为日期时间
             String notificationTime = getNotificationTime(sbn.getPostTime());
