@@ -9,6 +9,7 @@ import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.service.notification.NotificationListenerService;
 import android.service.notification.StatusBarNotification;
+import android.util.Log;
 import android.widget.RemoteViews;
 import android.widget.Toast;
 import android.content.Context;
@@ -17,6 +18,7 @@ import android.content.Context;
 import androidx.annotation.NonNull;
 
 import com.wu1015.sbnotificationbox.R;
+import com.wu1015.sbnotificationbox.mailsend.EmailSender;
 
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -67,6 +69,19 @@ public class MyNotificationListenerService extends NotificationListenerService {
 
             // 将通知内容追加写入文件
             appendToFile(title, text);
+
+            // todo 加入过滤，只转发重要通知
+            // todo 连接在1min左右就会超时，不发送邮件，但是还是会返回true
+            // EmailSender.sendEmail3("Notification Mi6", title+"\n"+text);
+            new Thread(() -> {
+                try {
+                    boolean f = EmailSender.sendEmail3("Notification Mi6", title+"\n"+text);
+                    Log.d("TAG", "onNotificationPosted: "+ f);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    onDestroy();
+                }
+            }).start();
 
             // 更新内容
             NotificationWidgetProvider.addItemToWidget(new MyNotification(title, text));
