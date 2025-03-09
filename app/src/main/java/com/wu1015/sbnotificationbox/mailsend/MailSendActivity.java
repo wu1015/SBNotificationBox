@@ -56,11 +56,8 @@ public class MailSendActivity extends AppCompatActivity {
                             // 返回验证邮箱成功与否
                             // Toast.makeText(getBaseContext(), String.valueOf(flag), Toast.LENGTH_LONG).show();
 
-                            // 初始化message信息
-                            Message message = new MimeMessage(MailSessionManager.getSession());
-                            message.setFrom(new InternetAddress(account));
-                            message.setRecipients(Message.RecipientType.TO, InternetAddress.parse(toMail));
-                            PersistentTransport.setMessage(message);
+                            // 存储发件人和收件人
+                            SecureEmailPreferences.saveEmail(getBaseContext(), account, toMail);
 
                             if(flag){
                                 finish();

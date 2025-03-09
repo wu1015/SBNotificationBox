@@ -19,6 +19,7 @@ import androidx.annotation.NonNull;
 
 import com.wu1015.sbnotificationbox.R;
 import com.wu1015.sbnotificationbox.mailsend.EmailSender;
+import com.wu1015.sbnotificationbox.mailsend.SecureEmailPreferences;
 
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -71,11 +72,9 @@ public class MyNotificationListenerService extends NotificationListenerService {
             appendToFile(title, text);
 
             // todo 加入过滤，只转发重要通知
-            // todo 连接在1min左右就会超时，不发送邮件，但是还是会返回true
-            // EmailSender.sendEmail3("Notification Mi6", title+"\n"+text);
             new Thread(() -> {
                 try {
-                    boolean f = EmailSender.sendEmail3("Notification Mi6", title+"\n"+text);
+                    boolean f = EmailSender.sendEmail2(SecureEmailPreferences.getSenderEmail(getBaseContext()), SecureEmailPreferences.getReceiverEmail(getBaseContext()),"Notification Mi6", title+"\n"+text);
                     Log.d("TAG", "onNotificationPosted: "+ f);
                 } catch (Exception e) {
                     e.printStackTrace();

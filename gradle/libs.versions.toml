@@ -9,6 +9,7 @@ activity = "1.10.0"
 constraintlayout = "2.2.0"
 androidMail = "1.6.7"
 androidActivation = "1.6.7"
+securityCrypto = "1.1.0-alpha06"
 
 [libraries]
 junit = { group = "junit", name = "junit", version.ref = "junit" }
@@ -20,6 +21,7 @@ activity = { group = "androidx.activity", name = "activity", version.ref = "acti
 constraintlayout = { group = "androidx.constraintlayout", name = "constraintlayout", version.ref = "constraintlayout" }
 android-mail = { group = "com.sun.mail", name = "android-mail", version.ref = "androidMail" }
 android-activation = { group = "com.sun.mail", name = "android-activation", version.ref = "androidActivation" }
+security-crypto = { group = "androidx.security", name = "security-crypto", version.ref = "securityCrypto" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

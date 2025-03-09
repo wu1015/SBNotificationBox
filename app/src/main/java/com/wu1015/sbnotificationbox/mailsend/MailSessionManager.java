@@ -1,5 +1,7 @@
 package com.wu1015.sbnotificationbox.mailsend;
 
+import android.util.Log;
+
 import java.util.Properties;
 import javax.mail.*;
 
@@ -13,6 +15,8 @@ public class MailSessionManager {
             props.put("mail.smtp.port", smtpPort);
             props.put("mail.smtp.auth", "true");
             props.put("mail.smtp.starttls.enable", "true");
+            props.put("mail.smtp.connectiontimeout", "10000"); // 10秒连接超时
+            props.put("mail.smtp.timeout", "10000"); // 10秒读写超时
 
             session = Session.getInstance(props, new Authenticator() {
                 @Override
@@ -27,6 +31,7 @@ public class MailSessionManager {
         if (session == null) {
             return null;
         }
+        Log.d("TAG", "getSession: "+session);
         return session;
     }
 }
