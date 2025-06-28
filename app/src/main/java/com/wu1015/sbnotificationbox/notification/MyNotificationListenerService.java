@@ -32,7 +32,7 @@ public class MyNotificationListenerService extends NotificationListenerService {
         // 获取通知的标题和内容
         Notification notification = sbn.getNotification();
         String notificationTitle = notification.extras.getString(Notification.EXTRA_TITLE);
-        String notificationText = notification.extras.getString(Notification.EXTRA_TEXT);
+        String notificationText = notification.extras.getString(Notification.EXTRA_TEXT).replaceAll("\r|\n", " ");
 
 
         // 只处理非常驻通知
