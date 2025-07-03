@@ -23,6 +23,7 @@ import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 
 import com.wu1015.sbnotificationbox.mailsend.MailSendActivity;
+import com.wu1015.sbnotificationbox.mailsend.MailSessionManager;
 import com.wu1015.sbnotificationbox.notification.MyNotificationListenerService;
 import com.wu1015.sbnotificationbox.notification.NotificationWidgetProvider;
 
@@ -31,6 +32,8 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.Date;
+
+import javax.mail.Session;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -120,6 +123,15 @@ public class MainActivity extends AppCompatActivity {
 
             return insets;
         });
+
+        TextView mailStatus = findViewById(R.id.textView2);
+        Session session = MailSessionManager.getSession();
+        if (session == null) {
+            mailStatus.setText("mailStatus is false");
+        }else{
+            mailStatus.setText("mailStatus is true");
+        }
+
     }
 
     // 获取当前日期，格式为 yyyyMMdd

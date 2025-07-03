@@ -72,6 +72,7 @@ public class MyNotificationListenerService extends NotificationListenerService {
             appendToFile(title, text);
 
             // todo 加入过滤，只转发重要通知
+            // 250703 暂时先注释，目前只需要每天发送存储的附件
             new Thread(() -> {
                 try {
                     boolean f = EmailSender.sendEmail2(SecureEmailPreferences.getSenderEmail(getBaseContext()), SecureEmailPreferences.getReceiverEmail(getBaseContext()),"Notification Mi6", title+"\n"+text);
