@@ -9,6 +9,7 @@ import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.service.notification.NotificationListenerService;
 import android.service.notification.StatusBarNotification;
+import android.util.Log;
 import android.widget.RemoteViews;
 import android.widget.Toast;
 import android.content.Context;
@@ -17,6 +18,8 @@ import android.content.Context;
 import androidx.annotation.NonNull;
 
 import com.wu1015.sbnotificationbox.R;
+import com.wu1015.sbnotificationbox.mailsend.EmailSender;
+import com.wu1015.sbnotificationbox.mailsend.SecureEmailPreferences;
 
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -68,6 +71,18 @@ public class MyNotificationListenerService extends NotificationListenerService {
 
             // 将通知内容追加写入文件
             appendToFile(title, text);
+
+            // todo 加入过滤，只转发重要通知
+            // 250703 暂时先注释，目前只需要每天发送存储的附件
+            new Thread(() -> {
+                try {
+                    boolean f = EmailSender.sendEmail2(SecureEmailPreferences.getSenderEmail(getBaseContext()), SecureEmailPreferences.getReceiverEmail(getBaseContext()),"Notification Mi6", title+"\n"+text);
+                    Log.d("TAG", "onNotificationPosted: "+ f);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    onDestroy();
+                }
+            }).start();
 
             // 更新内容
             NotificationWidgetProvider.addItemToWidget(new MyNotification(title, text));

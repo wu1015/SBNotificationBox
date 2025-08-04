@@ -1,3 +1,11 @@
 <resources>
     <string name="app_name">SBNotificationBox</string>
+    <string name="mail_login">MailLogin</string>
+    <string name="name">Name</string>
+    <string name="to_mail">ToMail</string>
+    <string name="pwd">Password</string>
+    <string name="login">Login</string>
+<!--    todo 后续将引用该资源-->
+    <string name="send_notification">send notification</string>
+    <string name="show_file_and_del">show file and del</string>
 </resources>

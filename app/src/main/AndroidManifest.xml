@@ -1,10 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
-<!--    发送通知权限-->
+    <!-- 发送通知权限 -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
-<!--    监听通知权限-->
-    <uses-permission android:name="android.permission.ACCESS_NOTIFICATION_POLICY"/>
+    <!-- 监听通知权限 -->
+    <uses-permission android:name="android.permission.ACCESS_NOTIFICATION_POLICY" />
+    <!--联网权限-->
+    <uses-permission android:name="android.permission.INTERNET"/>
+
     <application
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
@@ -16,6 +19,9 @@
         android:theme="@style/Theme.SBNotificationBox"
         tools:targetApi="31">
         <activity
+            android:name=".mailsend.MailSendActivity"
+            android:exported="false" />
+        <activity
             android:name=".MainActivity"
             android:exported="true">
             <intent-filter>
@@ -24,6 +30,7 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
         <service
             android:name=".notification.MyNotificationListenerService"
             android:exported="true"
@@ -31,9 +38,9 @@
             <intent-filter>
                 <action android:name="android.service.notification.NotificationListenerService" />
             </intent-filter>
-        </service>
-        <!-- 声明小部件 -->
-        <receiver android:name=".notification.NotificationWidgetProvider"
+        </service> <!-- 声明小部件 -->
+        <receiver
+            android:name=".notification.NotificationWidgetProvider"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
@@ -42,9 +49,7 @@
             <meta-data
                 android:name="android.appwidget.provider"
                 android:resource="@xml/widget_info" />
-        </receiver>
-
-<!--        小部件listview数据提供-->
+        </receiver> <!-- 小部件listview数据提供 -->
         <service
             android:name=".notification.WidgetRemoteViewsService"
             android:exported="true"
@@ -53,9 +58,6 @@
                 <action android:name="android.widget.RemoteViewsService" />
             </intent-filter>
         </service>
-
-
     </application>
-
 
 </manifest>

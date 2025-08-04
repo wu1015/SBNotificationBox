@@ -7,6 +7,7 @@ import android.annotation.SuppressLint;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.content.Context;
+import android.content.Intent;
 import android.os.Build;
 import android.os.Bundle;
 import android.view.View;
@@ -21,6 +22,8 @@ import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 
+import com.wu1015.sbnotificationbox.mailsend.MailSendActivity;
+import com.wu1015.sbnotificationbox.mailsend.MailSessionManager;
 import com.wu1015.sbnotificationbox.notification.MyNotificationListenerService;
 import com.wu1015.sbnotificationbox.notification.NotificationWidgetProvider;
 
@@ -29,6 +32,8 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.Date;
+
+import javax.mail.Session;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -100,8 +105,33 @@ public class MainActivity extends AppCompatActivity {
 
                 }
             });
+
+            Button button2 = findViewById(R.id.button3);
+            button2.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    Thread thread = new Thread() {
+                        @Override
+                        public void run() {
+                            Intent intent = new Intent(getApplicationContext(), MailSendActivity.class);
+                            startActivity(intent);
+                        }
+                    };
+                    thread.start();
+                }
+            });
+
             return insets;
         });
+
+        TextView mailStatus = findViewById(R.id.textView2);
+        Session session = MailSessionManager.getSession();
+        if (session == null) {
+            mailStatus.setText("mailStatus is false");
+        }else{
+            mailStatus.setText("mailStatus is true");
+        }
+
     }
 
     // 获取当前日期，格式为 yyyyMMdd
