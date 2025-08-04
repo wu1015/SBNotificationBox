@@ -6,11 +6,15 @@ import static com.wu1015.sbnotificationbox.notification.FileUtils.getFilesArrayL
 import android.annotation.SuppressLint;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
+import android.bluetooth.BluetoothAdapter;
+import android.bluetooth.BluetoothDevice;
 import android.content.Context;
 import android.os.Build;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
+import android.widget.ListView;
+import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -21,6 +25,8 @@ import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 
+import com.wu1015.sbnotificationbox.bluetoothsend.BluetoothServerThread;
+import com.wu1015.sbnotificationbox.bluetoothsend.DeviceListAdapter;
 import com.wu1015.sbnotificationbox.notification.MyNotificationListenerService;
 import com.wu1015.sbnotificationbox.notification.NotificationWidgetProvider;
 
@@ -28,7 +34,9 @@ import java.text.SimpleDateFormat;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -143,5 +151,14 @@ public class MainActivity extends AppCompatActivity {
         }
 
         return stringBuilder.toString();  // 返回文件的内容
+    }
+
+    // 蓝牙组件
+    private void bluetoothCreate(){
+        Switch switch_bluetooth_server = findViewById(R.id.switch_bluetooth_server);
+        Switch switch_bluetooth_client = findViewById(R.id.switch_bluetooth_client);
+        Button btn_bluetooth_devices = findViewById(R.id.btn_bluetooth_devices);
+
+        BluetoothAdapter bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
     }
 }
