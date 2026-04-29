@@ -4,12 +4,14 @@ import static com.wu1015.sbnotificationbox.notification.FileUtils.delAllFiles;
 import static com.wu1015.sbnotificationbox.notification.FileUtils.getFilesArrayList;
 
 import android.annotation.SuppressLint;
+import android.app.AlertDialog;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Build;
 import android.os.Bundle;
+import android.provider.Settings;
 import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
@@ -37,11 +39,17 @@ import javax.mail.Session;
 
 public class MainActivity extends AppCompatActivity {
 
+    private static final int REQUEST_NOTIFICATION_LISTENER = 1002;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         EdgeToEdge.enable(this);
         setContentView(R.layout.activity_main);
+
+        // 检查并请求通知监听权限
+        checkAndRequestNotificationListenerPermission();
+
 
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main), (v, insets) -> {
             Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
@@ -174,4 +182,51 @@ public class MainActivity extends AppCompatActivity {
 
         return stringBuilder.toString();  // 返回文件的内容
     }
+
+    private void checkAndRequestNotificationListenerPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            String enabledListeners = Settings.Secure.getString(
+                    getContentResolver(),
+                    "enabled_notification_listeners");
+
+            String packageName = getPackageName();
+            boolean isEnabled = enabledListeners != null &&
+                    enabledListeners.contains(packageName);
+
+            if (!isEnabled) {
+                new AlertDialog.Builder(this)
+                        .setTitle("需要通知监听权限")
+                        .setMessage("应用需要通知监听权限才能正常工作，请在设置中开启")
+                        .setPositiveButton("去设置", (dialog, which) -> {
+                            Intent intent = new Intent(
+                                    "android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS");
+                            startActivityForResult(intent, REQUEST_NOTIFICATION_LISTENER);
+                        })
+                        .setNegativeButton("取消", null)
+                        .show();
+            }
+        }
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == REQUEST_NOTIFICATION_LISTENER) {
+            String enabledListeners = Settings.Secure.getString(
+                    getContentResolver(),
+                    "enabled_notification_listeners");
+
+            String packageName = getPackageName();
+            boolean isEnabled = enabledListeners != null &&
+                    enabledListeners.contains(packageName);
+
+            if (isEnabled) {
+                Toast.makeText(this, "通知监听权限已授予", Toast.LENGTH_SHORT).show();
+            } else {
+                Toast.makeText(this, "未授予通知监听权限", Toast.LENGTH_SHORT).show();
+            }
+        }
+    }
+
+
 }
