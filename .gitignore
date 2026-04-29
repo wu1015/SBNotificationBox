@@ -1,0 +1,19 @@
+# Build & Output
+/build/
+.gradle/
+*.apk
+*.class
+*.dex
+
+# Local Configuration
+local.properties
+
+# IDE (Android Studio/IntelliJ)
+.idea/*
+# .idea/workspace.xml
+#.idea/caches/
+#.idea/libraries/
+*.iml
+
+# OS specific
+.DS_Store
