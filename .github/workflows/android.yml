@@ -7,6 +7,8 @@ jobs:
   build:
 
     runs-on: ubuntu-latest
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
     steps:
     - uses: actions/checkout@v4
@@ -22,8 +24,18 @@ jobs:
     - name: Build with Gradle
       run: ./gradlew build
 
+    - name: Get current date
+      id: date
+      run: echo "DATE=$(date +'%Y%m%d')" >> $GITHUB_OUTPUT
+
+    - name: Rename APK with date
+      run: |
+        APK_PATH="app/build/outputs/apk/debug/app-debug.apk"
+        NEW_APK_PATH="app/build/outputs/apk/debug/app-debug-${{ steps.date.outputs.DATE }}.apk"
+        mv "$APK_PATH" "$NEW_APK_PATH"
+
     - name: Upload APK as artifact
       uses: actions/upload-artifact@v4
       with:
-        name: debug-apk
+        name: debug-apk-${{ steps.date.outputs.DATE }}
         path: app/build/outputs/apk/debug/*.apk
