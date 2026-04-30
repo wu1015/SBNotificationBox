@@ -5,32 +5,40 @@
     android:layout_height="match_parent"
     android:padding="8dp">
 
-        <ListView
-            android:id="@+id/widget_listview"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:divider="@android:color/darker_gray"
-            android:dividerHeight="1dp"
-            android:scrollbars="vertical"/>
+    <ListView
+        android:id="@+id/widget_listview"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:divider="@android:color/darker_gray"
+        android:dividerHeight="1dp"
+        android:scrollbars="vertical"/>
 
     <TextView
         android:id="@+id/empty_view"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="center"
-        android:text="暂无数据" />
+        android:text="@string/none_data"
+        android:visibility="gone"/>
 
 
-    <Button
+    <FrameLayout
         android:id="@+id/btn_scroll_bottom"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
+        android:layout_width="32dp"
+        android:layout_height="32dp"
         android:layout_gravity="bottom|end"
-        android:layout_margin="8dp"
-        android:background="#47FFFFFF"
-        android:minWidth="40dp"
-        android:minHeight="40dp"
-        android:padding="4dp"
-        android:text="↓"
-        android:textSize="18sp" />
+        android:layout_margin="12dp"
+        android:background="@drawable/widget_btn_bg"
+        android:clickable="true"
+        android:focusable="true">
+
+        <!-- 向下箭头图标 -->
+        <ImageView
+            android:layout_width="18dp"
+            android:layout_height="18dp"
+            android:layout_gravity="center"
+            android:contentDescription="@string/scroll_to_the_bottom"
+            android:src="@android:drawable/arrow_down_float"
+            app:tint="#FFFFFF" />
+    </FrameLayout>
 </FrameLayout>
