@@ -35,37 +35,38 @@ public class NotificationWidgetProvider extends AppWidgetProvider {
                 ComponentName thisWidget = new ComponentName(context, NotificationWidgetProvider.class);
                 int[] appWidgetIds = appWidgetManager.getAppWidgetIds(thisWidget);
 
-                // 获取数据总数
-                int count = WidgetRemoteViewsService.getItemCount();
-
                 // 创建RemoteViews
                 RemoteViews views = new RemoteViews(context.getPackageName(), R.layout.widget_layout);
-                Intent serviceIntent = new Intent(context, WidgetRemoteViewsService.class);
-                views.setRemoteAdapter(R.id.widget_listview, serviceIntent);
 
-                // 设置空视图
-                views.setEmptyView(R.id.widget_listview, R.id.empty_view);
+                // 关键优化：不要在这里重新设置 Adapter (setRemoteAdapter)
+                // 只要 Adapter ID 没变，系统会保留当前的 Adapter 和数据状态
+                // Intent serviceIntent = new Intent(context, WidgetRemoteViewsService.class);
+                // views.setRemoteAdapter(R.id.widget_listview, serviceIntent);
 
-                // 重新设置点击事件
+                // 设置空视图 (通常不需要每次都设置，除非空视图状态变了)
+                // views.setEmptyView(R.id.widget_listview, R.id.empty_view);
+
+                // 重新设置点击事件 (如果PendingIntent没变，其实也可以不设，但为了保险起见保留)
                 Intent scrollIntent = new Intent(context, NotificationWidgetProvider.class);
                 scrollIntent.setAction("com.wu1015.sbnotificationbox.SCROLL_TO_BOTTOM");
                 PendingIntent pendingIntent = PendingIntent.getBroadcast(context, 0, scrollIntent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
                 views.setOnClickPendingIntent(R.id.btn_scroll_bottom, pendingIntent);
 
-                // 结合使用setScrollPosition和setRelativeScrollPosition方法
+                // 获取数据总数
+                int count = WidgetRemoteViewsService.getItemCount();
+
+                // 执行滚动
                 if (count > 0) {
-                    // 先设置绝对滚动位置
-//                    views.setScrollPosition(R.id.widget_listview, (int) Float.MAX_VALUE);
-                    // 再设置相对滚动位置
-//                    views.setRelativeScrollPosition(R.id.widget_listview, (int) -Float.MAX_VALUE);
-                    // 设置绝对滚动最大也就是为列表末尾
-                    views.setScrollPosition(R.id.widget_listview, Integer.MAX_VALUE);
+                    // 使用 smoothScrollToPosition 效果更好，但RemoteViews只支持 setScrollPosition
+                    // 直接滚动到最后一个位置
+                    views.setScrollPosition(R.id.widget_listview, count - 1);
                 }
+
                 // 更新小部件
                 appWidgetManager.updateAppWidget(appWidgetIds, views);
 
-                // 通知数据更新
-                appWidgetManager.notifyAppWidgetViewDataChanged(appWidgetIds, R.id.widget_listview);
+                // 关键修改：注释掉这行！不要触发数据刷新
+                // appWidgetManager.notifyAppWidgetViewDataChanged(appWidgetIds, R.id.widget_listview);
             }
         } catch (Exception e) {
             Log.e("NotificationWidget", "Error handling scroll to bottom", e);
@@ -106,7 +107,7 @@ public class NotificationWidgetProvider extends AppWidgetProvider {
 
         int[] appWidgetIds = appWidgetManager.getAppWidgetIds(thisWidget);
 
-        // 通知 Widget 更新
+        // 通知 Widget 更新 (这里保留，因为这是外部显式调用的刷新，说明数据确实变了)
         appWidgetManager.notifyAppWidgetViewDataChanged(appWidgetIds, R.id.widget_listview);
 
         // 更新小部件
