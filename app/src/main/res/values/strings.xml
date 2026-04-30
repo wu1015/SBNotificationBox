@@ -8,4 +8,6 @@
 <!--    todo 后续将引用该资源-->
     <string name="send_notification">send notification</string>
     <string name="show_file_and_del">show file and del</string>
+    <string name="none_data">none data</string>
+    <string name="scroll_to_the_bottom">scroll_to_the_bottom</string>
 </resources>
