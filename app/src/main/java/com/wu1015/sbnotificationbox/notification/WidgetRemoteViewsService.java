@@ -25,6 +25,15 @@ public class WidgetRemoteViewsService extends RemoteViewsService {
         }
     }
 
+    // 静态方法，用于获取数据总数
+    public static int getItemCount() {
+        if (factory != null) {
+            return factory.getCount();
+        }
+        return 0;
+    }
+
+
     // 静态方法，用于清空数据
     public static void clearItems() {
         if (factory != null) {

@@ -1,9 +1,8 @@
-<?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
     android:padding="8dp">
 
         <ListView
@@ -13,4 +12,25 @@
             android:divider="@android:color/darker_gray"
             android:dividerHeight="1dp"
             android:scrollbars="vertical"/>
-</LinearLayout>
+
+    <TextView
+        android:id="@+id/empty_view"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:text="暂无数据" />
+
+
+    <Button
+        android:id="@+id/btn_scroll_bottom"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|end"
+        android:layout_margin="8dp"
+        android:background="#47FFFFFF"
+        android:minWidth="40dp"
+        android:minHeight="40dp"
+        android:padding="4dp"
+        android:text="↓"
+        android:textSize="18sp" />
+</FrameLayout>
