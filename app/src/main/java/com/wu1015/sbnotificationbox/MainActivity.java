@@ -23,6 +23,7 @@ import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 
+import com.wu1015.sbnotificationbox.historymanager.HistoryManagerActivity;
 import com.wu1015.sbnotificationbox.mailsend.MailSendActivity;
 import com.wu1015.sbnotificationbox.mailsend.MailSessionManager;
 import com.wu1015.sbnotificationbox.notification.NotificationWidgetProvider;
@@ -127,6 +128,21 @@ public class MainActivity extends AppCompatActivity {
                 }
             });
 
+            // 进入历史文件管理页面
+            Button button3 = findViewById(R.id.button4);
+            button3.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View view) {
+                    Thread thread = new Thread() {
+                        @Override
+                        public void run() {
+                            Intent intent = new Intent(getApplicationContext(), HistoryManagerActivity.class);
+                            startActivity(intent);
+                        }
+                    };
+                    thread.start();
+                }
+            });
             return insets;
         });
 
