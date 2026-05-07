@@ -1,7 +1,6 @@
 package com.wu1015.sbnotificationbox;
 
-import static com.wu1015.sbnotificationbox.notification.FileUtils.delAllFiles;
-import static com.wu1015.sbnotificationbox.notification.FileUtils.getFilesArrayList;
+import static com.wu1015.sbnotificationbox.utils.FileUtils.delAllFiles;
 
 import android.annotation.SuppressLint;
 import android.app.AlertDialog;
@@ -26,7 +25,6 @@ import androidx.core.view.WindowInsetsCompat;
 
 import com.wu1015.sbnotificationbox.mailsend.MailSendActivity;
 import com.wu1015.sbnotificationbox.mailsend.MailSessionManager;
-import com.wu1015.sbnotificationbox.notification.MyNotificationListenerService;
 import com.wu1015.sbnotificationbox.notification.NotificationWidgetProvider;
 
 import java.text.SimpleDateFormat;

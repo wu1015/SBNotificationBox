@@ -7,6 +7,7 @@ import android.util.Log;
 import android.widget.RemoteViews;
 import android.widget.RemoteViewsService;
 
+import com.wu1015.sbnotificationbox.utils.FileUtils;
 import com.wu1015.sbnotificationbox.R;
 
 import java.util.ArrayList;
