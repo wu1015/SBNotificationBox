@@ -1,7 +1,10 @@
-package com.wu1015.sbnotificationbox.notification;
+package com.wu1015.sbnotificationbox.utils;
 
 import android.annotation.SuppressLint;
 import android.content.Context;
+
+import com.wu1015.sbnotificationbox.notification.MyNotification;
+import com.wu1015.sbnotificationbox.notification.MyNotificationFile;
 
 import java.io.BufferedReader;
 import java.io.File;
