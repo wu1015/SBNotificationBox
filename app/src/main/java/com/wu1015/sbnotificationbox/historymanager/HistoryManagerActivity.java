@@ -23,6 +23,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.wu1015.sbnotificationbox.R;
 import com.wu1015.sbnotificationbox.notification.MyNotification;
 import com.wu1015.sbnotificationbox.notification.MyNotificationFile;
+import com.wu1015.sbnotificationbox.notification.NotificationWidgetProvider;
 import com.wu1015.sbnotificationbox.utils.FileUtils;
 
 import java.io.File;
@@ -108,12 +109,17 @@ public class HistoryManagerActivity extends AppCompatActivity {
                     if (fileToDelete.delete()) {
                         Toast.makeText(this, "文件已删除", Toast.LENGTH_SHORT).show();
                         loadFileList();
+                        // 删除小部件内容
+                        NotificationWidgetProvider.clearWidgetItems();
+                        // 更新小部件
+                        NotificationWidgetProvider.updateWidget(getBaseContext());
                     } else {
                         Toast.makeText(this, "删除失败", Toast.LENGTH_SHORT).show();
                     }
                 })
                 .setNegativeButton("取消", null)
                 .show();
+
     }
 
     // 文件适配器
