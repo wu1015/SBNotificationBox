@@ -3,7 +3,6 @@ package com.wu1015.sbnotificationbox.notification;
 import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.Intent;
-import android.util.Log;
 import android.widget.RemoteViews;
 import android.widget.RemoteViewsService;
 
@@ -15,48 +14,49 @@ import java.util.List;
 
 public class WidgetRemoteViewsFactory implements RemoteViewsService.RemoteViewsFactory {
 
-    private Context context;
-    private List<MyNotification> itemList;
-
+    private final Context context;
+    private final List<MyNotification> itemList;
 
     public WidgetRemoteViewsFactory(Context context, Intent intent) {
         this.context = context;
-        itemList = new ArrayList<>();
-        // 初始化数据
-        itemList.addAll(FileUtils.readFileContentLast(context));
-        if(itemList.isEmpty()){
-            itemList.add(new MyNotification("new","new"));
+        this.itemList = new ArrayList<>();
+        // 从今日日志加载已有数据
+        List<MyNotification> savedItems = FileUtils.readFileContentLast(context);
+        if (!savedItems.isEmpty()) {
+            itemList.addAll(savedItems);
+        } else {
+            // 没有数据时显示占位提示
+            itemList.add(new MyNotification("No notifications yet", "New notifications will appear here"));
         }
-    }
-
-    // todo 测试用，记得删除
-    private void loadNotificationData() {
-        Log.d("Widget", "Data are share");
     }
 
     @Override
     public RemoteViews getViewAt(int position) {
-        @SuppressLint("RemoteViewLayout") RemoteViews views = new RemoteViews(context.getPackageName(), R.layout.widget_item);
+        if (position < 0 || position >= itemList.size()) {
+            return null;
+        }
+
+        @SuppressLint("RemoteViewLayout")
+        RemoteViews views = new RemoteViews(context.getPackageName(), R.layout.widget_item);
         views.setTextViewText(R.id.widget_item_title, itemList.get(position).getTitle());
         views.setTextViewText(R.id.widget_item_text, itemList.get(position).getText());
-        Log.d("Widget", "Data is being set."+itemList.get(position));
         return views;
     }
 
     @Override
     public void onCreate() {
-
+        // 初始化（当前不需要额外操作）
     }
 
     @Override
     public void onDataSetChanged() {
-        // 数据更新时可以进行处理
-        // loadNotificationData();
+        // 数据更新时回调（当前由外部直接操作 itemList）
     }
 
     @Override
     public void onDestroy() {
-
+        // 清理资源
+        itemList.clear();
     }
 
     @Override
@@ -84,14 +84,14 @@ public class WidgetRemoteViewsFactory implements RemoteViewsService.RemoteViewsF
         return true;
     }
 
-    // 添加数据的方法
+    // ==================== 数据操作方法 ====================
+
     public void addItem(MyNotification item) {
         itemList.add(item);
     }
 
-    // 清空数据的方法
     public void clearItems() {
         itemList.clear();
-        itemList.add(new MyNotification("new","new"));
+        itemList.add(new MyNotification("No notifications yet", "New notifications will appear here"));
     }
 }

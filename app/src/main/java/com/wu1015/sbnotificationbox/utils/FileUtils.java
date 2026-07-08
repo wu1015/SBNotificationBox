@@ -2,6 +2,7 @@ package com.wu1015.sbnotificationbox.utils;
 
 import android.annotation.SuppressLint;
 import android.content.Context;
+import android.util.Log;
 
 import com.wu1015.sbnotificationbox.notification.MyNotification;
 import com.wu1015.sbnotificationbox.notification.MyNotificationFile;
@@ -14,13 +15,14 @@ import java.io.InputStreamReader;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.Locale;
 
 // 通知文本文件工具类
 public class FileUtils {
 
     // 获取应用私有文件目录
     public static String getAppFilesDir(Context context) {
-        File fileDir = context.getFilesDir();  // 获取应用私有目录
+        File fileDir = context.getFilesDir();
         return fileDir != null ? fileDir.getAbsolutePath() : "Directory not found";
     }
 
@@ -29,19 +31,14 @@ public class FileUtils {
         ArrayList<MyNotificationFile> myNotificationFileArrayList = new ArrayList<>();
         String directoryPath = getAppFilesDir(context);
 
-        // 获取目录文件列表
         File directory = new File(directoryPath);
-
-        // 获取目录下的所有文件
         File[] files = directory.listFiles();
 
         if (files != null) {
             for (File file : files) {
                 if (file.isFile()) {
-                    // 获取文件名和路径
                     String fileName = file.getName();
                     String filePath = file.getAbsolutePath();
-
                     myNotificationFileArrayList.add(new MyNotificationFile(fileName, filePath));
                 }
             }
@@ -49,75 +46,86 @@ public class FileUtils {
         return myNotificationFileArrayList;
     }
 
-    // 删除应用自带目录下的所有文件
-    public static boolean delAllFiles(Context context){
+    // 删除应用自带目录下的所有 .md 文件
+    public static boolean delAllFiles(Context context) {
         String directoryPath = getAppFilesDir(context);
         File directory = new File(directoryPath);
 
         if (directory.exists() && directory.isDirectory()) {
             File[] files = directory.listFiles();
             if (files != null) {
+                boolean allDeleted = true;
                 for (File file : files) {
-                    // 判断文件是否是 .md 文件
                     if (file.isFile() && file.getName().endsWith(".md")) {
-                        boolean deleted = file.delete();
-                        if (!deleted) {
-                            return false;
+                        if (!file.delete()) {
+                            allDeleted = false;
+                            Log.w("FileUtils", "Failed to delete: " + file.getName());
                         }
                     }
                 }
-                return true;
+                return allDeleted;
             }
         }
         return false;
     }
 
-    // 读取文件内容
+    // 读取指定日期的文件内容
     public static ArrayList<MyNotification> readFileContent(String currentDate, Context context) {
         ArrayList<MyNotification> myNotificationArrayList = new ArrayList<>();
         FileInputStream fis = null;
+        BufferedReader reader = null;
+
         try {
-            String fileName = currentDate + "_notifications_log.md";  // 使用当前日期作为文件名
+            String fileName = currentDate + "_notifications_log.md";
             File file = new File(context.getFilesDir(), fileName);
+
+            if (!file.exists()) {
+                return myNotificationArrayList; // 文件不存在，返回空列表
+            }
+
             fis = new FileInputStream(file);
-            BufferedReader reader = new BufferedReader(new InputStreamReader(fis));
+            reader = new BufferedReader(new InputStreamReader(fis, "UTF-8"));
 
             String line;
-            boolean flag = true;
+            boolean isTitle = true;
             MyNotification myNotification = new MyNotification();
+
             while ((line = reader.readLine()) != null) {
-                if(line.trim().isEmpty()){
+                if (line.trim().isEmpty()) {
                     continue;
                 }
-                if (flag) {
+                if (isTitle) {
                     myNotification.setTitle(line);
-                    flag = false;
+                    isTitle = false;
                 } else {
                     myNotification.setText(line);
                     myNotificationArrayList.add(myNotification);
                     myNotification = new MyNotification();
-                    flag = true;
+                    isTitle = true;
                 }
             }
-            reader.close();
         } catch (IOException e) {
-            e.printStackTrace();
+            Log.e("FileUtils", "Failed to read file: " + currentDate, e);
         } finally {
             try {
+                if (reader != null) {
+                    reader.close();
+                }
                 if (fis != null) {
                     fis.close();
                 }
             } catch (IOException e) {
-                e.printStackTrace();
+                Log.e("FileUtils", "Failed to close file", e);
             }
         }
         return myNotificationArrayList;
     }
 
     // 读取今日文件内容
+    @SuppressLint("SimpleDateFormat")
     public static ArrayList<MyNotification> readFileContentLast(Context context) {
-        @SuppressLint("SimpleDateFormat") SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd"); // 文件名格式为：yyyyMMdd
-        String currentDate = sdf.format(new Date()); // 获取当前日期
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd", Locale.US);
+        String currentDate = sdf.format(new Date());
         return readFileContent(currentDate, context);
     }
 }

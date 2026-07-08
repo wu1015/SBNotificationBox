@@ -2,13 +2,28 @@
     <string name="app_name">SBNotificationBox</string>
     <string name="mail_login">MailLogin</string>
     <string name="history_manager">HistoryManager</string>
-    <string name="name">Name</string>
-    <string name="to_mail">ToMail</string>
-    <string name="pwd">Password</string>
-    <string name="login">Login</string>
-    <!--    todo 后续将引用该资源-->
+    <string name="name">Email Address</string>
+    <string name="to_mail">Recipient Email</string>
+    <string name="pwd">Password / Auth Code</string>
+    <string name="login">Login &amp; Test</string>
     <string name="send_notification">send notification</string>
     <string name="show_file_and_del">show file and del</string>
     <string name="none_data">none data</string>
     <string name="scroll_to_the_bottom">scroll_to_the_bottom</string>
+    <string name="smtp_host">SMTP Host (e.g. smtp.example.com)</string>
+    <string name="smtp_port">SMTP Port (e.g. 587)</string>
+    <string name="provider_auto">Auto Detect (from email)</string>
+    <string name="provider_custom">Custom SMTP</string>
+    <string name="sending">Sending test email…</string>
+    <string name="send_success">Test email sent successfully!</string>
+    <string name="send_failed">Failed to send email. Check credentials.</string>
+    <string name="invalid_email">Please enter a valid email address</string>
+    <string name="invalid_password">Please enter password/auth code</string>
+    <string name="invalid_recipient">Please enter a recipient email</string>
+    <string name="filter_whitelist">Whitelist</string>
+    <string name="filter_blacklist">Blacklist</string>
+    <string name="filter_mode">Filter Mode</string>
+    <string name="filter_packages">Filter Packages</string>
+    <string name="add_package">Add Package</string>
+    <string name="package_name_hint">com.example.app</string>
 </resources>

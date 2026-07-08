@@ -1,9 +1,6 @@
 package com.wu1015.sbnotificationbox.historymanager;
 
 import android.app.AlertDialog;
-import android.content.DialogInterface;
-import android.content.Intent;
-import android.net.Uri;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -27,8 +24,10 @@ import com.wu1015.sbnotificationbox.notification.NotificationWidgetProvider;
 import com.wu1015.sbnotificationbox.utils.FileUtils;
 
 import java.io.File;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.List;
+import java.util.Date;
+import java.util.Locale;
 
 public class HistoryManagerActivity extends AppCompatActivity {
 
@@ -47,87 +46,100 @@ public class HistoryManagerActivity extends AppCompatActivity {
             return insets;
         });
 
-        // 初始化RecyclerView
+        // 启用返回按钮
+        if (getSupportActionBar() != null) {
+            getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+        }
+
+        // 初始化 RecyclerView
         recyclerView = findViewById(R.id.recyclerView);
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
 
-        // 加载文件列表
         loadFileList();
     }
 
     @Override
     protected void onResume() {
         super.onResume();
-        // 每次返回Activity时重新加载文件列表
         loadFileList();
     }
 
+    @Override
+    public boolean onSupportNavigateUp() {
+        finish();
+        return true;
+    }
+
     private void loadFileList() {
-        // 使用FileUtils获取文件列表
         fileList = FileUtils.getFilesArrayList(this);
 
-        // 设置适配器
-        adapter = new FileAdapter(fileList);
-        recyclerView.setAdapter(adapter);
+        if (adapter == null) {
+            adapter = new FileAdapter(fileList);
+            recyclerView.setAdapter(adapter);
+        } else {
+            adapter.updateFiles(fileList);
+        }
     }
 
     private void openFile(MyNotificationFile file) {
         try {
-            // 使用FileUtils读取文件内容
-            ArrayList<MyNotification> notifications = FileUtils.readFileContent(
-                    file.getFileName().replace("_notifications_log.md", ""), this);
+            // 去掉 "_notifications_log.md" 后缀获取日期部分
+            String datePart = file.getFileName().replace("_notifications_log.md", "");
+            ArrayList<MyNotification> notifications = FileUtils.readFileContent(datePart, this);
 
             if (notifications.isEmpty()) {
-                Toast.makeText(this, "文件内容为空", Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, "File is empty", Toast.LENGTH_SHORT).show();
                 return;
             }
 
-            // 创建一个StringBuilder来构建显示内容
             StringBuilder content = new StringBuilder();
             for (MyNotification notification : notifications) {
                 content.append(notification.getTitle()).append("\n");
                 content.append(notification.getText()).append("\n\n");
             }
 
-            // 创建并显示对话框
             new AlertDialog.Builder(this)
                     .setTitle(file.getFileName())
                     .setMessage(content.toString())
-                    .setPositiveButton("关闭", null)
+                    .setPositiveButton("Close", null)
                     .show();
         } catch (Exception e) {
-            Toast.makeText(this, "无法打开文件: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "Cannot open file: " + e.getMessage(), Toast.LENGTH_SHORT).show();
         }
     }
 
     private void deleteFile(MyNotificationFile file) {
         new AlertDialog.Builder(this)
-                .setTitle("确认删除")
-                .setMessage("确定要删除 " + file.getFileName() + " 吗？")
-                .setPositiveButton("删除", (dialog, which) -> {
+                .setTitle("Confirm Delete")
+                .setMessage("Delete " + file.getFileName() + "?")
+                .setPositiveButton("Delete", (dialog, which) -> {
                     File fileToDelete = new File(file.getFilePath());
                     if (fileToDelete.delete()) {
-                        Toast.makeText(this, "文件已删除", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(this, "File deleted", Toast.LENGTH_SHORT).show();
                         loadFileList();
-                        // 删除小部件内容
+                        // 如果删除的是今天的文件，同时清空小部件
                         NotificationWidgetProvider.clearWidgetItems();
-                        // 更新小部件
                         NotificationWidgetProvider.updateWidget(getBaseContext());
                     } else {
-                        Toast.makeText(this, "删除失败", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(this, "Delete failed", Toast.LENGTH_SHORT).show();
                     }
                 })
-                .setNegativeButton("取消", null)
+                .setNegativeButton("Cancel", null)
                 .show();
-
     }
 
-    // 文件适配器
+    // ==================== RecyclerView 适配器 ====================
+
     private class FileAdapter extends RecyclerView.Adapter<FileAdapter.FileViewHolder> {
         private ArrayList<MyNotificationFile> files;
 
         public FileAdapter(ArrayList<MyNotificationFile> files) {
             this.files = files;
+        }
+
+        public void updateFiles(ArrayList<MyNotificationFile> newFiles) {
+            this.files = newFiles;
+            notifyDataSetChanged();
         }
 
         @NonNull
@@ -150,16 +162,16 @@ public class HistoryManagerActivity extends AppCompatActivity {
             if (fileSize < 1024) {
                 sizeText = fileSize + " B";
             } else if (fileSize < 1024 * 1024) {
-                sizeText = String.format("%.1f KB", fileSize / 1024.0);
+                sizeText = String.format(Locale.US, "%.1f KB", fileSize / 1024.0);
             } else {
-                sizeText = String.format("%.1f MB", fileSize / (1024.0 * 1024));
+                sizeText = String.format(Locale.US, "%.1f MB", fileSize / (1024.0 * 1024));
             }
             holder.fileSize.setText(sizeText);
 
             // 获取文件修改时间
             long lastModified = fileObj.lastModified();
-            java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.getDefault());
-            holder.fileDate.setText(sdf.format(new java.util.Date(lastModified)));
+            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US);
+            holder.fileDate.setText(sdf.format(new Date(lastModified)));
 
             // 设置点击事件
             holder.itemView.setOnClickListener(v -> openFile(file));

@@ -26,6 +26,9 @@
             android:name=".mailsend.MailSendActivity"
             android:exported="false" />
         <activity
+            android:name=".mailsend.FilterSettingsActivity"
+            android:exported="false" />
+        <activity
             android:name=".MainActivity"
             android:exported="true">
             <intent-filter>
