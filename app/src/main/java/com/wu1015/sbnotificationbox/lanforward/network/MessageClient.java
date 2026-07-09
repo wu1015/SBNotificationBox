@@ -9,6 +9,7 @@ import org.json.JSONObject;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
@@ -24,15 +25,19 @@ public class MessageClient {
 
     /**
      * 发送文字消息
+     * @param secret 连接密钥（空字符串 = 不发送密钥）
      */
     public static boolean sendText(String deviceName, String ip, int port,
-                                   String content) {
+                                   String content, String secret) {
         try {
             JSONObject json = new JSONObject();
             json.put("type", "text");
             json.put("deviceName", deviceName);
             json.put("content", content);
             json.put("timestamp", System.currentTimeMillis());
+            if (secret != null && !secret.isEmpty()) {
+                json.put("secret", secret);
+            }
 
             return sendJson(ip, port, json) != null;
         } catch (Exception e) {
@@ -43,9 +48,11 @@ public class MessageClient {
 
     /**
      * 发送文件（图片+普通文件）
+     * @param secret 连接密钥（空字符串 = 不发送密钥）
      */
     public static boolean sendFile(String deviceName, String ip, int port,
-                                   File file, LanMessage.Type fileType) {
+                                   File file, LanMessage.Type fileType,
+                                   String secret) {
         Socket socket = null;
         try {
             socket = new Socket();
@@ -59,6 +66,9 @@ public class MessageClient {
             header.put("fileName", file.getName());
             header.put("fileSize", file.length());
             header.put("timestamp", System.currentTimeMillis());
+            if (secret != null && !secret.isEmpty()) {
+                header.put("secret", secret);
+            }
 
             out.write((header.toString() + "\n").getBytes("UTF-8"));
             out.flush();
@@ -99,17 +109,20 @@ public class MessageClient {
      */
     private static String sendJson(String ip, int port, JSONObject json) throws Exception {
         Socket socket = new Socket();
-        socket.connect(new InetSocketAddress(ip, port), CONNECT_TIMEOUT);
+        try {
+            socket.connect(new InetSocketAddress(ip, port), CONNECT_TIMEOUT);
 
-        OutputStream out = socket.getOutputStream();
-        out.write((json.toString() + "\n").getBytes("UTF-8"));
-        out.flush();
+            OutputStream out = socket.getOutputStream();
+            out.write((json.toString() + "\n").getBytes("UTF-8"));
+            out.flush();
 
-        // 读取响应（可选）
-        BufferedReader reader = new BufferedReader(
-                new InputStreamReader(socket.getInputStream(), "UTF-8"));
-        String response = reader.readLine();
-        socket.close();
-        return response;
+            // 读取响应（可选）
+            BufferedReader reader = new BufferedReader(
+                    new InputStreamReader(socket.getInputStream(), "UTF-8"));
+            String response = reader.readLine();
+            return response;
+        } finally {
+            try { socket.close(); } catch (IOException ignored) {}
+        }
     }
 }

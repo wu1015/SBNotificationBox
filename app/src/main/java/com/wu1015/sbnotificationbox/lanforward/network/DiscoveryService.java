@@ -5,6 +5,7 @@ import android.net.wifi.WifiManager;
 import android.util.Log;
 
 import com.wu1015.sbnotificationbox.lanforward.model.LanDevice;
+import com.wu1015.sbnotificationbox.lanforward.storage.LanPreferences;
 
 import org.json.JSONObject;
 
@@ -22,6 +23,7 @@ import java.util.List;
 /**
  * UDP 广播设备发现服务。
  * 使用 UDP 广播（255.255.255.255）替代组播，兼容性更好。
+ * 支持持续监听、心跳保活、双向发现。
  */
 public class DiscoveryService {
 
@@ -30,15 +32,17 @@ public class DiscoveryService {
     static final int DISCOVERY_PORT = 9876;
     private static final int RECEIVE_TIMEOUT_MS = 4000;
     private static final int LISTEN_TIMEOUT_MS = 5000;
+    private static final int HEARTBEAT_INTERVAL_MS = 10000; // 10 秒心跳
 
     private final String deviceName;
     private final int serverPort;
     private final Context context;
     private final DiscoveryListener listener;
 
-    private DatagramSocket listenSocket;
+    private volatile DatagramSocket listenSocket;
     private volatile boolean running = false;
     private Thread listenThread;
+    private Thread heartbeatThread;
 
     // 本机 WiFi IP（null = 未找到）
     private String localWifiIp;
@@ -57,13 +61,33 @@ public class DiscoveryService {
         this.localWifiIp = getWifiIpAddress();
     }
 
-    /** 开始持续监听（后台线程） */
+    /** 开始持续监听（后台线程）+ 心跳广播 */
     public void start() {
         if (running) return;
         running = true;
+
+        // 启动监听线程
         listenThread = new Thread(this::listenLoop, "DiscoveryListen");
         listenThread.setDaemon(true);
         listenThread.start();
+
+        // 启动心跳线程（定期广播自身存在）
+        heartbeatThread = new Thread(() -> {
+            while (running) {
+                sendBroadcast();
+                try {
+                    Thread.sleep(HEARTBEAT_INTERVAL_MS);
+                } catch (InterruptedException e) {
+                    break;
+                }
+            }
+        }, "DiscoveryHeartbeat");
+        heartbeatThread.setDaemon(true);
+        heartbeatThread.start();
+
+        // 立即发送一次初始广播
+        sendBroadcast();
+
         Log.i(TAG, "Discovery listener started (WiFi IP: " + localWifiIp + ")");
     }
 
@@ -73,33 +97,33 @@ public class DiscoveryService {
         sendBroadcast();
     }
 
-    /** 单次广播并等待回复（阻塞，最多 4 秒） */
+    /** 单次广播并等待回复（阻塞，最多 4 秒）。
+     *  使用临时 socket 绑定到临时端口，不与 listenSocket 冲突。 */
     public List<LanDevice> discoverOnce() {
         List<LanDevice> found = new ArrayList<>();
-
-        // 临时监听 socket
         DatagramSocket tempSocket = null;
+
         try {
-            tempSocket = createBoundSocket(DISCOVERY_PORT);
+            // 使用临时端口，不与 listenLoop 的端口 9876 冲突
+            tempSocket = createSendSocket();
             tempSocket.setSoTimeout(RECEIVE_TIMEOUT_MS);
         } catch (Exception e) {
             Log.e(TAG, "Cannot create temp socket", e);
             return found;
         }
 
-        // 发送广播
-        sendBroadcastTo(null); // 使用临时 socket 发送
+        // 通过临时 socket 发送广播
+        sendBroadcastTo(tempSocket);
 
-        // 接收回复
+        // 接收回复（远程设备会回复到临时 socket 的源端口）
         byte[] buf = new byte[1024];
         long deadline = System.currentTimeMillis() + RECEIVE_TIMEOUT_MS;
 
-        DatagramSocket recvSocket = tempSocket;
         try {
             while (System.currentTimeMillis() < deadline) {
                 try {
                     DatagramPacket recv = new DatagramPacket(buf, buf.length);
-                    recvSocket.receive(recv);
+                    tempSocket.receive(recv);
                     LanDevice device = parseResponse(recv);
                     if (device != null && !found.contains(device)) {
                         found.add(device);
@@ -120,6 +144,7 @@ public class DiscoveryService {
     public void stop() {
         running = false;
         if (listenThread != null) listenThread.interrupt();
+        if (heartbeatThread != null) heartbeatThread.interrupt();
         closeQuietly(listenSocket);
         listenSocket = null;
         Log.i(TAG, "Discovery stopped");
@@ -153,6 +178,10 @@ public class DiscoveryService {
             json.put("type", "discovery");
             json.put("deviceName", deviceName);
             json.put("port", serverPort);
+            String secret = LanPreferences.getConnectionSecret(context);
+            if (!secret.isEmpty()) {
+                json.put("secret", secret);
+            }
             byte[] data = json.toString().getBytes("UTF-8");
 
             DatagramPacket packet = new DatagramPacket(data, data.length,
@@ -165,6 +194,7 @@ public class DiscoveryService {
         }
     }
 
+    /** 监听循环：接收发现包并回复发送方，实现双向发现 */
     private void listenLoop() {
         try {
             listenSocket = createBoundSocket(DISCOVERY_PORT);
@@ -177,8 +207,32 @@ public class DiscoveryService {
                     DatagramPacket packet = new DatagramPacket(buf, buf.length);
                     listenSocket.receive(packet);
                     LanDevice device = parseResponse(packet);
-                    if (device != null && listener != null) {
-                        listener.onDeviceFound(device);
+                    if (device != null) {
+                        if (listener != null) {
+                            listener.onDeviceFound(device);
+                        }
+
+                        // 回复发送方，告知本设备信息（双向发现的关键）
+                        // 注意：必须发到 DISCOVERY_PORT，不能发到 packet.getPort()
+                        // 因为发送方用的是临时端口（已关闭），发到 9876 才能被对方的 listenSocket 收到
+                        try {
+                            JSONObject resp = new JSONObject();
+                            resp.put("type", "discovery");
+                            resp.put("deviceName", deviceName);
+                            resp.put("port", serverPort);
+                            String secret = LanPreferences.getConnectionSecret(context);
+                            if (!secret.isEmpty()) {
+                                resp.put("secret", secret);
+                            }
+                            byte[] respData = resp.toString().getBytes("UTF-8");
+                            DatagramPacket response = new DatagramPacket(
+                                    respData, respData.length,
+                                    packet.getAddress(),    // 发送方 IP
+                                    DISCOVERY_PORT);        // 发到发现端口，不是临时端口
+                            listenSocket.send(response);
+                        } catch (Exception e) {
+                            Log.w(TAG, "Failed to send discovery response", e);
+                        }
                     }
                 } catch (SocketTimeoutException e) {
                     // 超时，继续循环检查 running
@@ -200,6 +254,15 @@ public class DiscoveryService {
             String json = new String(packet.getData(), 0, packet.getLength(), "UTF-8");
             JSONObject obj = new JSONObject(json);
             if ("discovery".equals(obj.optString("type"))) {
+                // 验证密钥（如果本地设置了密钥）
+                String localSecret = LanPreferences.getConnectionSecret(context);
+                if (!localSecret.isEmpty()) {
+                    String remoteSecret = obj.optString("secret", "");
+                    if (!localSecret.equals(remoteSecret)) {
+                        Log.w(TAG, "Secret mismatch from " + packet.getAddress().getHostAddress());
+                        return null; // 密钥不匹配，忽略该设备
+                    }
+                }
                 String name = obj.optString("deviceName", "Unknown");
                 int port = obj.optInt("port", 9877);
                 String ip = packet.getAddress().getHostAddress();
@@ -213,7 +276,7 @@ public class DiscoveryService {
         return null;
     }
 
-    /** 创建用于发送的 DatagramSocket（绑定 WiFi 接口） */
+    /** 创建用于发送的 DatagramSocket（绑定临时端口） */
     private DatagramSocket createSendSocket() throws IOException {
         DatagramSocket sock;
         if (localWifiIp != null) {
@@ -235,8 +298,9 @@ public class DiscoveryService {
             sock.setReuseAddress(true);
             sock.bind(new InetSocketAddress(localWifiIp, port));
         } else {
-            sock = new DatagramSocket(port);
+            sock = new DatagramSocket(null);
             sock.setReuseAddress(true);
+            sock.bind(new InetSocketAddress(port));
         }
         return sock;
     }

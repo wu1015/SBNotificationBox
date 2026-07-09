@@ -118,6 +118,50 @@
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
+        <!-- 连接密钥 -->
+        <com.google.android.material.card.MaterialCardView
+            style="@style/AppCard"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="12dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Connection Secret"
+                    android:textAppearance="?attr/textAppearanceTitleSmall"
+                    android:textColor="?attr/colorPrimary" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:layout_marginBottom="12dp"
+                    android:text="Devices must share the same secret to connect. Leave empty for no authentication."
+                    android:textAppearance="?attr/textAppearanceBodySmall"
+                    android:textColor="?attr/colorOnSurfaceVariant" />
+
+                <com.google.android.material.textfield.TextInputLayout
+                    style="@style/AppTextInput"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:hint="Secret (optional)"
+                    app:endIconMode="clear_text">
+
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/editTextSecret"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:inputType="text" />
+                </com.google.android.material.textfield.TextInputLayout>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
         <!-- 保存按钮 -->
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnSave"

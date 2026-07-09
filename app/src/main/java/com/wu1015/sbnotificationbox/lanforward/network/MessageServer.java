@@ -13,6 +13,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.concurrent.ExecutorService;
@@ -28,6 +30,7 @@ public class MessageServer {
 
     private final int port;
     private final String saveDir;          // 文件保存目录
+    private final String connectionSecret; // 连接密钥（空 = 不验证）
     private final MessageListener listener;
 
     private ServerSocket serverSocket;
@@ -43,9 +46,11 @@ public class MessageServer {
         void onFileReceived(LanMessage message);
     }
 
-    public MessageServer(int port, String saveDir, MessageListener listener) {
+    public MessageServer(int port, String saveDir, String connectionSecret,
+                         MessageListener listener) {
         this.port = port;
         this.saveDir = saveDir;
+        this.connectionSecret = (connectionSecret != null) ? connectionSecret : "";
         this.listener = listener;
     }
 
@@ -63,7 +68,10 @@ public class MessageServer {
         threadPool.execute(() -> {
             while (running.get()) {
                 try {
-                    serverSocket = new ServerSocket(port);
+                    ServerSocket ss = new ServerSocket();
+                    ss.setReuseAddress(true);
+                    ss.bind(new InetSocketAddress((InetAddress) null, port));
+                    serverSocket = ss;
                     Log.i(TAG, "Server listening on port " + port);
 
                     while (running.get()) {
@@ -113,6 +121,7 @@ public class MessageServer {
     private void handleClient(Socket client) {
         try {
             client.setSoTimeout(30000); // 30秒超时
+            String clientIp = client.getInetAddress().getHostAddress();
             InputStream in = client.getInputStream();
             OutputStream out = client.getOutputStream();
             BufferedReader reader = new BufferedReader(new InputStreamReader(in, "UTF-8"));
@@ -128,12 +137,22 @@ public class MessageServer {
             String type = header.optString("type", "");
             String deviceName = header.optString("deviceName", "Unknown");
 
+            // 验证连接密钥
+            if (!connectionSecret.isEmpty()) {
+                String receivedSecret = header.optString("secret", "");
+                if (!connectionSecret.equals(receivedSecret)) {
+                    Log.w(TAG, "Secret mismatch from " + deviceName + ", rejecting");
+                    client.close();
+                    return;
+                }
+            }
+
             Log.d(TAG, "Received: type=" + type + " from " + deviceName);
 
             if ("text".equals(type)) {
-                handleTextMessage(deviceName, header, client);
+                handleTextMessage(deviceName, clientIp, header, client);
             } else if ("image".equals(type) || "file".equals(type)) {
-                handleFileMessage(deviceName, header, type, in, out, client);
+                handleFileMessage(deviceName, clientIp, header, type, in, out, client);
             } else {
                 Log.w(TAG, "Unknown message type: " + type);
             }
@@ -146,12 +165,14 @@ public class MessageServer {
         }
     }
 
-    private void handleTextMessage(String deviceName, JSONObject header, Socket client) {
+    private void handleTextMessage(String deviceName, String clientIp,
+                                   JSONObject header, Socket client) {
         String content = header.optString("content", "");
         long ts = header.optLong("timestamp", System.currentTimeMillis());
 
         LanMessage msg = LanMessage.createText(deviceName, content, LanMessage.Direction.RECEIVED);
         msg.setTimestamp(ts);
+        msg.setIpAddress(clientIp);
 
         if (listener != null) {
             listener.onTextMessage(msg);
@@ -169,7 +190,8 @@ public class MessageServer {
         }
     }
 
-    private void handleFileMessage(String deviceName, JSONObject header, String type,
+    private void handleFileMessage(String deviceName, String clientIp,
+                                   JSONObject header, String type,
                                    InputStream in, OutputStream out,
                                    Socket client) throws IOException {
         String fileName = header.optString("fileName", "unknown");
@@ -180,6 +202,7 @@ public class MessageServer {
         LanMessage msg = LanMessage.createFile(deviceName, fileName, fileSize,
                 msgType, LanMessage.Direction.RECEIVED);
         msg.setTimestamp(ts);
+        msg.setIpAddress(clientIp);
 
         // 通知 UI 层，等待用户确认
         if (listener != null) {

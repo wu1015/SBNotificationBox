@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:gravity="center_vertical"
+    android:minHeight="56dp"
+    android:orientation="horizontal"
+    android:paddingStart="12dp"
+    android:paddingTop="6dp"
+    android:paddingEnd="4dp"
+    android:paddingBottom="6dp"
+    android:background="?attr/selectableItemBackground">
+
+    <!-- 设备信息 -->
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/textDeviceName"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textAppearance="?attr/textAppearanceBodyMedium"
+            android:textColor="?attr/colorOnSurface"
+            android:maxLines="1"
+            android:ellipsize="end" />
+
+        <TextView
+            android:id="@+id/textDeviceStatus"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textAppearance="?attr/textAppearanceBodySmall"
+            android:textSize="12sp"
+            android:maxLines="1"
+            android:ellipsize="end" />
+    </LinearLayout>
+
+    <!-- Connect 按钮 -->
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnConnect"
+        style="?attr/materialButtonOutlinedStyle"
+        android:layout_width="wrap_content"
+        android:layout_height="36dp"
+        android:layout_marginStart="4dp"
+        android:text="Connect"
+        android:textSize="11sp"
+        android:minWidth="0dp"
+        android:paddingHorizontal="8dp"
+        app:cornerRadius="8dp" />
+
+    <!-- Disconnect 按钮 -->
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnDisconnect"
+        style="?attr/materialButtonOutlinedStyle"
+        android:layout_width="wrap_content"
+        android:layout_height="36dp"
+        android:layout_marginStart="2dp"
+        android:text="Remove"
+        android:textSize="11sp"
+        android:minWidth="0dp"
+        android:paddingHorizontal="8dp"
+        app:cornerRadius="8dp"
+        android:textColor="?attr/colorError"
+        app:strokeColor="?attr/colorError" />
+
+</LinearLayout>

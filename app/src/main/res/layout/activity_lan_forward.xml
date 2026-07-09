@@ -20,6 +20,15 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
+    <com.google.android.material.switchmaterial.SwitchMaterial
+        android:id="@+id/switchLanForward"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="4dp"
+        app:layout_constraintBottom_toBottomOf="@+id/toolbarTitle"
+        app:layout_constraintEnd_toStartOf="@+id/btnSettings"
+        app:layout_constraintTop_toTopOf="@+id/toolbarTitle" />
+
     <com.google.android.material.button.MaterialButton
         android:id="@+id/btnSettings"
         style="?attr/materialButtonOutlinedStyle"

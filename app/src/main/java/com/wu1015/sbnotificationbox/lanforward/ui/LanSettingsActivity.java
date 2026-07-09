@@ -22,6 +22,7 @@ public class LanSettingsActivity extends AppCompatActivity {
 
     private TextInputEditText editTextDeviceName;
     private TextInputEditText editTextStorageDir;
+    private TextInputEditText editTextSecret;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -45,6 +46,7 @@ public class LanSettingsActivity extends AppCompatActivity {
     private void initViews() {
         editTextDeviceName = findViewById(R.id.editTextDeviceName);
         editTextStorageDir = findViewById(R.id.editTextStorageDir);
+        editTextSecret = findViewById(R.id.editTextSecret);
         MaterialButton btnBrowse = findViewById(R.id.btnBrowseFolder);
         MaterialButton btnSave = findViewById(R.id.btnSave);
 
@@ -55,11 +57,13 @@ public class LanSettingsActivity extends AppCompatActivity {
     private void loadSettings() {
         editTextDeviceName.setText(LanPreferences.getDeviceName(this));
         editTextStorageDir.setText(LanPreferences.getStorageDir(this));
+        editTextSecret.setText(LanPreferences.getConnectionSecret(this));
     }
 
     private void saveSettings() {
         String name = editTextDeviceName.getText().toString().trim();
         String dir = editTextStorageDir.getText().toString().trim();
+        String secret = editTextSecret.getText().toString().trim();
 
         if (name.isEmpty()) {
             Toast.makeText(this, "Device name cannot be empty", Toast.LENGTH_SHORT).show();
@@ -67,6 +71,7 @@ public class LanSettingsActivity extends AppCompatActivity {
         }
 
         LanPreferences.setDeviceName(this, name);
+        LanPreferences.setConnectionSecret(this, secret);
 
         if (!dir.isEmpty()) {
             File f = new File(dir);

@@ -1,10 +1,11 @@
 package com.wu1015.sbnotificationbox.lanforward.ui;
 
-import android.app.AlertDialog;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.Handler;
 import android.provider.OpenableColumns;
+import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
@@ -21,6 +22,7 @@ import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 
 import com.google.android.material.button.MaterialButton;
+import com.google.android.material.switchmaterial.SwitchMaterial;
 import com.google.android.material.textfield.TextInputEditText;
 import com.wu1015.sbnotificationbox.R;
 import com.wu1015.sbnotificationbox.lanforward.model.LanDevice;
@@ -46,15 +48,18 @@ public class LanForwardActivity extends AppCompatActivity {
 
     private final List<LanDevice> deviceList = new ArrayList<>();
     private final List<LanMessage> messageList = new ArrayList<>();
-    private ArrayAdapter<String> deviceAdapter;
-    private ArrayAdapter<String> messageAdapter;
+    private ArrayAdapter<LanDevice> deviceAdapter;
+    private ArrayAdapter<LanMessage> messageAdapter;
 
     private LanManager lanManager;
     private LanManager.LanStatusListener lanListener;
     private LanDevice selectedDevice;
-    private AlertDialog pendingFileDialog;
 
     private String myDeviceName;
+
+    // UI 定期刷新
+    private Handler refreshHandler;
+    private Runnable refreshTask;
 
     private final ActivityResultLauncher<String[]> filePickerLauncher =
             registerForActivityResult(new ActivityResultContracts.OpenDocument(),
@@ -95,6 +100,7 @@ public class LanForwardActivity extends AppCompatActivity {
         MaterialButton btnSend = findViewById(R.id.btnSend);
         MaterialButton btnAttach = findViewById(R.id.btnAttach);
         MaterialButton btnSettings = findViewById(R.id.btnSettings);
+        SwitchMaterial switchLanForward = findViewById(R.id.switchLanForward);
 
         btnScan.setOnClickListener(v -> doScan());
         btnConnect.setOnClickListener(v -> connectToIp());
@@ -102,6 +108,26 @@ public class LanForwardActivity extends AppCompatActivity {
         btnAttach.setOnClickListener(v -> pickFile());
         btnSettings.setOnClickListener(v ->
                 startActivity(new Intent(this, LanSettingsActivity.class)));
+
+        // LAN 转发开关
+        switchLanForward.setChecked(LanPreferences.isLanEnabled(this));
+        switchLanForward.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            LanPreferences.setLanEnabled(LanForwardActivity.this, isChecked);
+            if (isChecked) {
+                lanManager.start();
+                // 刷新设备列表
+                refreshDeviceList();
+            } else {
+                lanManager.stop();
+                deviceList.clear();
+                deviceAdapter.notifyDataSetChanged();
+                if (selectedDevice != null) {
+                    selectedDevice = null;
+                    Toast.makeText(this, "LAN disabled, deselected device",
+                            Toast.LENGTH_SHORT).show();
+                }
+            }
+        });
 
         listViewDevices.setOnItemClickListener((parent, view, pos, id) -> {
             selectedDevice = deviceList.get(pos);
@@ -111,31 +137,51 @@ public class LanForwardActivity extends AppCompatActivity {
     }
 
     private void initAdapters() {
-        deviceAdapter = new ArrayAdapter<String>(this,
-                android.R.layout.simple_list_item_2, android.R.id.text1) {
+        // 设备列表适配器（使用自定义布局）
+        deviceAdapter = new ArrayAdapter<LanDevice>(this,
+                R.layout.item_device, deviceList) {
             @Override
             public View getView(int pos, View convertView, ViewGroup parent) {
-                View view = super.getView(pos, convertView, parent);
-                TextView text1 = view.findViewById(android.R.id.text1);
-                TextView text2 = view.findViewById(android.R.id.text2);
+                if (convertView == null) {
+                    convertView = LayoutInflater.from(getContext())
+                            .inflate(R.layout.item_device, parent, false);
+                }
                 LanDevice d = deviceList.get(pos);
-                text1.setText(d.getDeviceName());
-                text2.setText(d.getIpAddress() + ":" + d.getPort() +
-                        (d.isOnline() ? " ● Online" : " ○ Offline"));
-                text2.setTextColor(d.isOnline() ? 0xFF4CAF50 : 0xFFBDBDBD);
-                return view;
+
+                TextView nameView = convertView.findViewById(R.id.textDeviceName);
+                TextView statusView = convertView.findViewById(R.id.textDeviceStatus);
+                MaterialButton btnConnect = convertView.findViewById(R.id.btnConnect);
+                MaterialButton btnDisconnect = convertView.findViewById(R.id.btnDisconnect);
+
+                nameView.setText(d.getDeviceName());
+                String status = d.getIpAddress() + ":" + d.getPort()
+                        + (d.isOnline() ? "  ● Online" : "  ○ Offline");
+                statusView.setText(status);
+                statusView.setTextColor(d.isOnline() ? 0xFF4CAF50 : 0xFFBDBDBD);
+
+                // Connect：选中设备用于发消息（即使离线也允许尝试）
+                btnConnect.setOnClickListener(v -> connectToDevice(d));
+                btnConnect.setEnabled(true); // 总是可点击，让用户尝试连接
+                btnConnect.setText(d.isOnline() ? "Connect" : "Try");
+
+                // Disconnect：从列表移除设备
+                btnDisconnect.setOnClickListener(v -> disconnectDevice(d));
+
+                return convertView;
             }
         };
         listViewDevices.setAdapter(deviceAdapter);
 
-        messageAdapter = new ArrayAdapter<String>(this,
-                android.R.layout.simple_list_item_2, android.R.id.text1) {
+        // 消息列表适配器
+        messageAdapter = new ArrayAdapter<LanMessage>(this,
+                android.R.layout.simple_list_item_2, android.R.id.text1, messageList) {
             @Override
             public View getView(int pos, View convertView, ViewGroup parent) {
                 View view = super.getView(pos, convertView, parent);
                 TextView text1 = view.findViewById(android.R.id.text1);
                 TextView text2 = view.findViewById(android.R.id.text2);
-                LanMessage m = messageList.get(pos);
+                LanMessage m = getItem(pos);
+                if (m == null) return view;
                 String prefix = m.getDirection() == LanMessage.Direction.SENT ? "→ " : "← ";
                 text1.setText(prefix + "[" + m.getDeviceName() + "]");
                 text2.setText(m.getSummary());
@@ -158,7 +204,12 @@ public class LanForwardActivity extends AppCompatActivity {
         lanListener = new LanManager.LanStatusListener() {
             @Override
             public void onStatusChanged(boolean running, int deviceCount) {
-                // 设备列表由 doScan/rescan 更新
+                // 设备状态变化时刷新列表（心跳/超时触发）
+                runOnUiThread(() -> {
+                    deviceList.clear();
+                    deviceList.addAll(lanManager.getDevices());
+                    deviceAdapter.notifyDataSetChanged();
+                });
             }
 
             @Override
@@ -176,6 +227,28 @@ public class LanForwardActivity extends AppCompatActivity {
             }
         };
         lanManager.addListener(lanListener);
+
+        // 初始加载设备列表
+        refreshDeviceList();
+
+        // 定期刷新设备列表（10 秒间隔，确保 UI 状态与后台同步）
+        refreshHandler = new Handler();
+        refreshTask = new Runnable() {
+            @Override
+            public void run() {
+                refreshDeviceList();
+                refreshHandler.postDelayed(this, 10000);
+            }
+        };
+        refreshHandler.postDelayed(refreshTask, 10000);
+    }
+
+    private void refreshDeviceList() {
+        if (lanManager != null) {
+            deviceList.clear();
+            deviceList.addAll(lanManager.getDevices());
+            deviceAdapter.notifyDataSetChanged();
+        }
     }
 
     // === 设备发现 ===
@@ -185,25 +258,21 @@ public class LanForwardActivity extends AppCompatActivity {
         Toast.makeText(this, "Scanning...", Toast.LENGTH_SHORT).show();
 
         // 刷新设备列表（从 LanManager 获取）
-        deviceList.clear();
-        List<LanDevice> known = lanManager.getDevices();
-        deviceList.addAll(known);
-        deviceAdapter.notifyDataSetChanged();
+        refreshDeviceList();
 
         // 重新发送广播
         lanManager.rescan();
 
         // 定时刷新列表（等待响应到达）
         findViewById(R.id.main).postDelayed(() -> {
-            deviceList.clear();
-            deviceList.addAll(lanManager.getDevices());
-            deviceAdapter.notifyDataSetChanged();
+            refreshDeviceList();
             Toast.makeText(LanForwardActivity.this,
                     "Found " + deviceList.size() + " device(s)",
                     Toast.LENGTH_SHORT).show();
         }, 2000);
     }
 
+    // === 设备连接 ===
 
     private void connectToIp() {
         String input = editTextIp.getText().toString().trim();
@@ -216,12 +285,31 @@ public class LanForwardActivity extends AppCompatActivity {
         String ip = parts[0];
         int port = parts.length > 1 ? Integer.parseInt(parts[1]) : lanManager.getServerPort();
 
-        selectedDevice = new LanDevice(ip, ip, port);
-        if (!deviceList.contains(selectedDevice)) {
-            deviceList.add(selectedDevice);
-            deviceAdapter.notifyDataSetChanged();
+        // 使用有意义的设备名称（而非 IP 地址）
+        LanDevice device = new LanDevice("Device at " + ip, ip, port);
+        lanManager.addManualDevice(device); // 添加到 LanManager + 持久化
+        refreshDeviceList(); // 刷新本地列表
+        selectedDevice = device;
+        Toast.makeText(this, "Added " + ip + ":" + port, Toast.LENGTH_SHORT).show();
+    }
+
+    private void connectToDevice(LanDevice device) {
+        selectedDevice = device;
+        // 如果设备是通过网络发现的，也持久化保存
+        lanManager.addManualDevice(device);
+        refreshDeviceList();
+        Toast.makeText(this, "Connected to " + device.getDeviceName(),
+                Toast.LENGTH_SHORT).show();
+    }
+
+    private void disconnectDevice(LanDevice device) {
+        if (selectedDevice != null && selectedDevice.equals(device)) {
+            selectedDevice = null;
         }
-        Toast.makeText(this, "Connected to " + ip + ":" + port, Toast.LENGTH_SHORT).show();
+        lanManager.removeDevice(device); // 从 LanManager + 持久化中移除
+        refreshDeviceList(); // 刷新本地列表
+        Toast.makeText(this, "Removed " + device.getDeviceName(),
+                Toast.LENGTH_SHORT).show();
     }
 
     // === 发送消息 ===
@@ -332,36 +420,12 @@ public class LanForwardActivity extends AppCompatActivity {
         return name;
     }
 
-    private long getFileSize(Uri uri) {
-        long size = 0;
-        try {
-            android.database.Cursor cursor = getContentResolver().query(uri, null,
-                    null, null, null);
-            if (cursor != null) {
-                int idx = cursor.getColumnIndex(OpenableColumns.SIZE);
-                if (idx >= 0 && cursor.moveToFirst()) {
-                    size = cursor.getLong(idx);
-                }
-                cursor.close();
-            }
-        } catch (Exception ignored) {}
-        return size;
-    }
-
-    // === 工具 ===
-
-    private String formatSize(long size) {
-        if (size < 1024) return size + " B";
-        if (size < 1024 * 1024) return String.format("%.1f KB", size / 1024.0);
-        return String.format("%.1f MB", size / (1024.0 * 1024.0));
-    }
-
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        if (pendingFileDialog != null && pendingFileDialog.isShowing()) {
-            pendingFileDialog.dismiss();
-            pendingFileDialog = null;
+        // 停止定期刷新
+        if (refreshHandler != null && refreshTask != null) {
+            refreshHandler.removeCallbacks(refreshTask);
         }
         // 移除监听器，但不停止 LanManager（它是持久化单例）
         if (lanManager != null && lanListener != null) {

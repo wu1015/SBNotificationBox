@@ -20,6 +20,7 @@ public class LanMessage {
     private Type type;
     private Direction direction;
     private String deviceName;
+    private String ipAddress;      // 发送方 IP（用于更新设备在线状态）
     private String content;        // 文字内容
     private String fileName;       // 文件名（图片/文件）
     private String filePath;       // 本地存储路径（接收后）
@@ -63,6 +64,9 @@ public class LanMessage {
 
     public String getDeviceName() { return deviceName; }
     public void setDeviceName(String deviceName) { this.deviceName = deviceName; }
+
+    public String getIpAddress() { return ipAddress; }
+    public void setIpAddress(String ipAddress) { this.ipAddress = ipAddress; }
 
     public String getContent() { return content; }
     public void setContent(String content) { this.content = content; }
