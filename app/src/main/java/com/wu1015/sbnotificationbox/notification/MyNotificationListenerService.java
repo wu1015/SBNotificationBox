@@ -19,8 +19,12 @@ import java.io.OutputStreamWriter;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class MyNotificationListenerService extends NotificationListenerService {
+
+    private final ExecutorService executor = Executors.newCachedThreadPool();
 
     @Override
     public void onNotificationPosted(StatusBarNotification sbn) {
@@ -75,7 +79,7 @@ public class MyNotificationListenerService extends NotificationListenerService {
             String finalAppName = appName;
             String finalTitle = title;
             String finalText = text;
-            new Thread(() -> {
+            executor.execute(() -> {
                 try {
                     boolean success = EmailSender.sendEmail2(
                             senderEmail, receiverEmail,
@@ -85,13 +89,19 @@ public class MyNotificationListenerService extends NotificationListenerService {
                 } catch (Exception e) {
                     Log.e("NotificationEmail", "Failed to send notification email", e);
                 }
-            }).start();
+            });
         }
     }
 
     @Override
     public void onNotificationRemoved(StatusBarNotification sbn) {
         // 当前不需要处理通知移除
+    }
+
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+        executor.shutdown();
     }
 
     private void appendToFile(String title, String text) {

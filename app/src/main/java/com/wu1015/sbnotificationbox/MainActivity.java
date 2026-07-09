@@ -26,6 +26,7 @@ import androidx.core.view.WindowInsetsCompat;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.card.MaterialCardView;
 import com.wu1015.sbnotificationbox.historymanager.HistoryManagerActivity;
+import com.wu1015.sbnotificationbox.lanforward.ui.LanForwardActivity;
 import com.wu1015.sbnotificationbox.mailsend.FilterSettingsActivity;
 import com.wu1015.sbnotificationbox.mailsend.MailSendActivity;
 import com.wu1015.sbnotificationbox.mailsend.MailSessionManager;
@@ -90,6 +91,10 @@ public class MainActivity extends AppCompatActivity {
         // 按钮：过滤设置
         MaterialButton btnFilter = findViewById(R.id.button5);
         btnFilter.setOnClickListener(v -> navigateTo(FilterSettingsActivity.class));
+
+        // 按钮：局域网转发
+        MaterialButton btnLan = findViewById(R.id.button6);
+        btnLan.setOnClickListener(v -> navigateTo(LanForwardActivity.class));
     }
 
     @Override

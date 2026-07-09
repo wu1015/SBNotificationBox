@@ -26,4 +26,5 @@
     <string name="filter_packages">Filter Packages</string>
     <string name="add_package">Add Package</string>
     <string name="package_name_hint">com.example.app</string>
+    <string name="lan_forward">LAN Forward</string>
 </resources>

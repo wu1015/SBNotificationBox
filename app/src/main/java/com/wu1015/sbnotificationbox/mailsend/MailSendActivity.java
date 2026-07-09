@@ -39,6 +39,7 @@ public class MailSendActivity extends AppCompatActivity {
     private TextView textViewStatus;
 
     private List<EmailSender.Provider> providerList;
+    private int selectedProviderPosition = 0; // 追踪当前选中的位置
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -92,6 +93,7 @@ public class MailSendActivity extends AppCompatActivity {
         spinnerProvider.setText(displayNames.get(0), false); // 默认显示 Auto Detect
 
         spinnerProvider.setOnItemClickListener((parent, view, position, id) -> {
+            selectedProviderPosition = position;
             EmailSender.Provider selected = providerList.get(position);
             cardCustomSmtp.setVisibility(
                     selected == EmailSender.Provider.CUSTOM ? View.VISIBLE : View.GONE);
@@ -110,8 +112,7 @@ public class MailSendActivity extends AppCompatActivity {
             public void afterTextChanged(Editable s) {
                 String email = s.toString().trim();
                 // 仅当当前选择为 Auto Detect 时自动切换
-                int pos = spinnerProvider.getListSelection();
-                if (pos == 0 && email.contains("@")) {
+                if (selectedProviderPosition == 0 && email.contains("@")) {
                     EmailSender.Provider detected = EmailSender.detectProvider(email);
                     if (detected != EmailSender.Provider.CUSTOM) {
                         int index = providerList.indexOf(detected);
@@ -148,7 +149,7 @@ public class MailSendActivity extends AppCompatActivity {
 
             setLoading(true);
 
-            int selectedPos = spinnerProvider.getListSelection();
+            int selectedPos = selectedProviderPosition;
             EmailSender.Provider selectedProvider = providerList.get(selectedPos);
 
             new Thread(() -> {
