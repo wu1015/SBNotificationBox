@@ -11,6 +11,7 @@ import android.widget.Toast;
 import androidx.activity.EdgeToEdge;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.content.ContextCompat;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
@@ -32,6 +33,7 @@ import java.util.Locale;
 public class HistoryManagerActivity extends AppCompatActivity {
 
     private RecyclerView recyclerView;
+    private TextView textViewEmpty;
     private FileAdapter adapter;
     private ArrayList<MyNotificationFile> fileList;
 
@@ -46,12 +48,11 @@ public class HistoryManagerActivity extends AppCompatActivity {
             return insets;
         });
 
-        // 启用返回按钮
         if (getSupportActionBar() != null) {
             getSupportActionBar().setDisplayHomeAsUpEnabled(true);
         }
 
-        // 初始化 RecyclerView
+        textViewEmpty = findViewById(R.id.textViewEmpty);
         recyclerView = findViewById(R.id.recyclerView);
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
 
@@ -73,6 +74,15 @@ public class HistoryManagerActivity extends AppCompatActivity {
     private void loadFileList() {
         fileList = FileUtils.getFilesArrayList(this);
 
+        // 处理空状态
+        if (fileList.isEmpty()) {
+            textViewEmpty.setVisibility(View.VISIBLE);
+            recyclerView.setVisibility(View.GONE);
+        } else {
+            textViewEmpty.setVisibility(View.GONE);
+            recyclerView.setVisibility(View.VISIBLE);
+        }
+
         if (adapter == null) {
             adapter = new FileAdapter(fileList);
             recyclerView.setAdapter(adapter);
@@ -83,7 +93,6 @@ public class HistoryManagerActivity extends AppCompatActivity {
 
     private void openFile(MyNotificationFile file) {
         try {
-            // 去掉 "_notifications_log.md" 后缀获取日期部分
             String datePart = file.getFileName().replace("_notifications_log.md", "");
             ArrayList<MyNotification> notifications = FileUtils.readFileContent(datePart, this);
 
@@ -117,7 +126,6 @@ public class HistoryManagerActivity extends AppCompatActivity {
                     if (fileToDelete.delete()) {
                         Toast.makeText(this, "File deleted", Toast.LENGTH_SHORT).show();
                         loadFileList();
-                        // 如果删除的是今天的文件，同时清空小部件
                         NotificationWidgetProvider.clearWidgetItems();
                         NotificationWidgetProvider.updateWidget(getBaseContext());
                     } else {
@@ -128,7 +136,7 @@ public class HistoryManagerActivity extends AppCompatActivity {
                 .show();
     }
 
-    // ==================== RecyclerView 适配器 ====================
+    // ==================== RecyclerView Adapter ====================
 
     private class FileAdapter extends RecyclerView.Adapter<FileAdapter.FileViewHolder> {
         private ArrayList<MyNotificationFile> files;
@@ -155,7 +163,6 @@ public class HistoryManagerActivity extends AppCompatActivity {
             MyNotificationFile file = files.get(position);
             holder.fileName.setText(file.getFileName());
 
-            // 获取文件大小
             File fileObj = new File(file.getFilePath());
             long fileSize = fileObj.length();
             String sizeText;
@@ -168,12 +175,10 @@ public class HistoryManagerActivity extends AppCompatActivity {
             }
             holder.fileSize.setText(sizeText);
 
-            // 获取文件修改时间
             long lastModified = fileObj.lastModified();
             SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US);
             holder.fileDate.setText(sdf.format(new Date(lastModified)));
 
-            // 设置点击事件
             holder.itemView.setOnClickListener(v -> openFile(file));
             holder.itemView.setOnLongClickListener(v -> {
                 deleteFile(file);

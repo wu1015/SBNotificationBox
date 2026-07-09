@@ -7,97 +7,144 @@
     android:layout_height="match_parent"
     tools:context=".mailsend.FilterSettingsActivity">
 
-    <TextView
-        android:id="@+id/textViewTitle"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="32dp"
-        android:text="@string/filter_mode"
-        android:textSize="18sp"
-        android:textStyle="bold"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
-
-    <RadioGroup
-        android:id="@+id/radioGroupMode"
+    <!-- ===== 模式选择卡片 ===== -->
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/cardMode"
+        style="@style/AppCard"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_marginStart="32dp"
+        android:layout_marginStart="16dp"
         android:layout_marginTop="16dp"
-        android:layout_marginEnd="32dp"
+        android:layout_marginEnd="16dp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/textViewTitle">
+        app:layout_constraintTop_toTopOf="parent">
 
-        <RadioButton
-            android:id="@+id/radioDisabled"
-            android:layout_width="wrap_content"
+        <LinearLayout
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Disabled (forward all)" />
+            android:orientation="vertical">
 
-        <RadioButton
-            android:id="@+id/radioWhitelist"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/filter_whitelist" />
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="12dp"
+                android:text="@string/filter_mode"
+                android:textAppearance="?attr/textAppearanceTitleMedium"
+                android:textColor="?attr/colorPrimary" />
 
-        <RadioButton
-            android:id="@+id/radioBlacklist"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/filter_blacklist" />
-    </RadioGroup>
+            <com.google.android.material.button.MaterialButtonToggleGroup
+                android:id="@+id/toggleGroupMode"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:checkedButton="@+id/btnDisabled"
+                app:selectionRequired="true"
+                app:singleSelection="true">
 
-    <TextView
-        android:id="@+id/textViewListLabel"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="32dp"
-        android:layout_marginTop="24dp"
-        android:text="@string/filter_packages"
-        android:textSize="16sp"
-        android:textStyle="bold"
-        android:visibility="gone"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/radioGroupMode" />
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnDisabled"
+                    style="?attr/materialButtonOutlinedStyle"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Disabled"
+                    app:cornerRadius="0dp" />
 
-    <Button
-        android:id="@+id/btnAddPackage"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="24dp"
-        android:layout_marginEnd="32dp"
-        android:text="@string/add_package"
-        android:visibility="gone"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/radioGroupMode" />
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnWhitelist"
+                    style="?attr/materialButtonOutlinedStyle"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="@string/filter_whitelist"
+                    app:cornerRadius="0dp" />
 
-    <ListView
-        android:id="@+id/listViewPackages"
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnBlacklist"
+                    style="?attr/materialButtonOutlinedStyle"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="@string/filter_blacklist"
+                    app:cornerRadius="0dp" />
+
+            </com.google.android.material.button.MaterialButtonToggleGroup>
+
+        </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
+
+    <!-- ===== 包名列表卡片 ===== -->
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/cardPackageList"
+        style="@style/AppCard.Outlined"
         android:layout_width="0dp"
         android:layout_height="0dp"
         android:layout_marginStart="16dp"
-        android:layout_marginTop="8dp"
+        android:layout_marginTop="12dp"
         android:layout_marginEnd="16dp"
         android:layout_marginBottom="16dp"
         android:visibility="gone"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/btnAddPackage" />
+        app:layout_constraintTop_toBottomOf="@+id/cardMode">
 
-    <TextView
-        android:id="@+id/textViewEmpty"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="48dp"
-        android:text="No packages added yet.\nLong press a package to remove it."
-        android:textAlignment="center"
-        android:textColor="@android:color/darker_gray"
-        android:visibility="gone"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/btnAddPackage" />
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:id="@+id/textViewListLabel"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="@string/filter_packages"
+                    android:textAppearance="?attr/textAppearanceTitleSmall"
+                    android:textColor="?attr/colorPrimary" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnAddPackage"
+                    style="?attr/materialButtonOutlinedStyle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="40dp"
+                    android:text="@string/add_package"
+                    app:icon="@android:drawable/ic_input_add" />
+            </LinearLayout>
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:layout_marginTop="8dp"
+                android:layout_marginBottom="12dp"
+                android:background="?attr/colorSurfaceVariant" />
+
+            <ListView
+                android:id="@+id/listViewPackages"
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:divider="?attr/colorSurfaceVariant"
+                android:dividerHeight="1dp" />
+
+            <TextView
+                android:id="@+id/textViewEmpty"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:layout_marginTop="48dp"
+                android:gravity="center"
+                android:text="No packages added yet.\nTap + to add a package.\nLong press to remove."
+                android:textAppearance="?attr/textAppearanceBodyMedium"
+                android:textColor="?attr/colorOnSurfaceVariant" />
+
+        </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

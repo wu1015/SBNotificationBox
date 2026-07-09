@@ -1,9 +1,84 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <!-- Base application theme. -->
+    <!-- ===== MD3 Light Theme ===== -->
     <style name="Base.Theme.SBNotificationBox" parent="Theme.Material3.DayNight.NoActionBar">
-        <!-- Customize your light theme here. -->
-        <!-- <item name="colorPrimary">@color/my_light_primary</item> -->
+        <!-- Primary -->
+        <item name="colorPrimary">@color/primary</item>
+        <item name="colorOnPrimary">@color/on_primary</item>
+        <item name="colorPrimaryContainer">@color/primary_container</item>
+        <item name="colorOnPrimaryContainer">@color/on_primary_container</item>
+
+        <!-- Secondary -->
+        <item name="colorSecondary">@color/secondary</item>
+        <item name="colorOnSecondary">@color/on_secondary</item>
+        <item name="colorSecondaryContainer">@color/secondary_container</item>
+        <item name="colorOnSecondaryContainer">@color/on_secondary_container</item>
+
+        <!-- Tertiary -->
+        <item name="colorTertiary">@color/tertiary</item>
+        <item name="colorOnTertiary">@color/on_tertiary</item>
+        <item name="colorTertiaryContainer">@color/tertiary_container</item>
+        <item name="colorOnTertiaryContainer">@color/on_tertiary_container</item>
+
+        <!-- Error -->
+        <item name="colorError">@color/error</item>
+        <item name="colorOnError">@color/on_error</item>
+        <item name="colorErrorContainer">@color/error_container</item>
+        <item name="colorOnErrorContainer">@color/on_error_container</item>
+
+        <!-- Surface & Background -->
+        <item name="android:colorBackground">@color/md_theme_light_surface</item>
+        <item name="colorSurface">@color/md_theme_light_surface</item>
+        <item name="colorOnSurface">@color/md_theme_light_on_surface</item>
+        <item name="colorSurfaceVariant">@color/md_theme_light_surface_variant</item>
+        <item name="colorOnSurfaceVariant">@color/md_theme_light_on_surface_variant</item>
+
+        <!-- Outline -->
+        <item name="colorOutline">@color/md_theme_light_outline</item>
+
+        <!-- Status bar -->
+        <item name="android:statusBarColor">@color/md_theme_light_surface</item>
+        <item name="android:navigationBarColor">@color/md_theme_light_surface</item>
     </style>
 
     <style name="Theme.SBNotificationBox" parent="Base.Theme.SBNotificationBox" />
+
+    <!-- ===== Card Styles ===== -->
+    <style name="AppCard" parent="Widget.Material3.CardView.Elevated">
+        <item name="cardCornerRadius">16dp</item>
+        <item name="cardElevation">2dp</item>
+        <item name="contentPadding">16dp</item>
+        <item name="strokeWidth">0dp</item>
+    </style>
+
+    <style name="AppCard.Outlined" parent="Widget.Material3.CardView.Outlined">
+        <item name="cardCornerRadius">16dp</item>
+        <item name="contentPadding">16dp</item>
+        <item name="strokeWidth">1dp</item>
+        <item name="strokeColor">@color/md_theme_light_outline</item>
+    </style>
+
+    <!-- ===== Button Styles ===== -->
+    <style name="AppButton" parent="Widget.Material3.Button">
+        <item name="cornerRadius">24dp</item>
+        <item name="android:minHeight">48dp</item>
+    </style>
+
+    <style name="AppButton.Filled" parent="Widget.Material3.Button">
+        <item name="cornerRadius">24dp</item>
+        <item name="android:minHeight">48dp</item>
+    </style>
+
+    <style name="AppButton.Tonal" parent="Widget.Material3.Button.TonalButton">
+        <item name="cornerRadius">24dp</item>
+        <item name="android:minHeight">48dp</item>
+    </style>
+
+    <!-- ===== Input Styles ===== -->
+    <style name="AppTextInput" parent="Widget.Material3.TextInputLayout.OutlinedBox">
+        <item name="boxCornerRadiusBottomEnd">12dp</item>
+        <item name="boxCornerRadiusBottomStart">12dp</item>
+        <item name="boxCornerRadiusTopEnd">12dp</item>
+        <item name="boxCornerRadiusTopStart">12dp</item>
+    </style>
 </resources>

@@ -4,7 +4,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:background="@color/black"
+    android:background="#E61C1B1F"
     android:padding="8dp">
 
     <TextView
@@ -16,7 +16,8 @@
         android:layout_marginBottom="2dp"
         android:textSize="11sp"
         android:text="Title"
-        android:textColor="@color/liteWhite" />
+        android:textColor="#C6C5D0"
+        tools:ignore="SmallSp" />
 
     <TextView
         android:id="@+id/widget_item_text"
@@ -25,6 +26,6 @@
         android:layout_marginStart="8dp"
         android:textSize="16sp"
         android:text="Text"
-        android:textColor="@color/white"/>
+        android:textColor="#E4E1E6" />
 
 </LinearLayout>

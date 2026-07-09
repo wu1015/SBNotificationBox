@@ -4,22 +4,23 @@ import android.app.AlertDialog;
 import android.os.Bundle;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
-import android.widget.Button;
-import android.widget.EditText;
 import android.widget.ListView;
-import android.widget.RadioButton;
-import android.widget.RadioGroup;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.activity.EdgeToEdge;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.content.ContextCompat;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 
+import com.google.android.material.button.MaterialButton;
+import com.google.android.material.button.MaterialButtonToggleGroup;
+import com.google.android.material.card.MaterialCardView;
+import com.google.android.material.textfield.TextInputEditText;
+import com.google.android.material.textfield.TextInputLayout;
 import com.wu1015.sbnotificationbox.R;
 
 import java.util.ArrayList;
@@ -27,13 +28,14 @@ import java.util.List;
 
 public class FilterSettingsActivity extends AppCompatActivity {
 
-    private RadioGroup radioGroupMode;
-    private RadioButton radioDisabled;
-    private RadioButton radioWhitelist;
-    private RadioButton radioBlacklist;
+    private MaterialButtonToggleGroup toggleGroupMode;
+    private MaterialButton btnDisabled;
+    private MaterialButton btnWhitelist;
+    private MaterialButton btnBlacklist;
+    private MaterialCardView cardPackageList;
     private TextView textViewListLabel;
     private ListView listViewPackages;
-    private Button btnAddPackage;
+    private MaterialButton btnAddPackage;
 
     private ArrayAdapter<String> adapter;
     private PackageFilterManager.FilterMode currentMode;
@@ -55,10 +57,11 @@ public class FilterSettingsActivity extends AppCompatActivity {
     }
 
     private void initViews() {
-        radioGroupMode = findViewById(R.id.radioGroupMode);
-        radioDisabled = findViewById(R.id.radioDisabled);
-        radioWhitelist = findViewById(R.id.radioWhitelist);
-        radioBlacklist = findViewById(R.id.radioBlacklist);
+        toggleGroupMode = findViewById(R.id.toggleGroupMode);
+        btnDisabled = findViewById(R.id.btnDisabled);
+        btnWhitelist = findViewById(R.id.btnWhitelist);
+        btnBlacklist = findViewById(R.id.btnBlacklist);
+        cardPackageList = findViewById(R.id.cardPackageList);
         textViewListLabel = findViewById(R.id.textViewListLabel);
         listViewPackages = findViewById(R.id.listViewPackages);
         btnAddPackage = findViewById(R.id.btnAddPackage);
@@ -69,14 +72,14 @@ public class FilterSettingsActivity extends AppCompatActivity {
 
         switch (currentMode) {
             case WHITELIST:
-                radioWhitelist.setChecked(true);
+                toggleGroupMode.check(R.id.btnWhitelist);
                 break;
             case BLACKLIST:
-                radioBlacklist.setChecked(true);
+                toggleGroupMode.check(R.id.btnBlacklist);
                 break;
             case DISABLED:
             default:
-                radioDisabled.setChecked(true);
+                toggleGroupMode.check(R.id.btnDisabled);
                 break;
         }
 
@@ -85,10 +88,12 @@ public class FilterSettingsActivity extends AppCompatActivity {
     }
 
     private void setupListeners() {
-        radioGroupMode.setOnCheckedChangeListener((group, checkedId) -> {
-            if (checkedId == R.id.radioWhitelist) {
+        toggleGroupMode.addOnButtonCheckedListener((group, checkedId, isChecked) -> {
+            if (!isChecked) return; // 忽略取消选中
+
+            if (checkedId == R.id.btnWhitelist) {
                 currentMode = PackageFilterManager.FilterMode.WHITELIST;
-            } else if (checkedId == R.id.radioBlacklist) {
+            } else if (checkedId == R.id.btnBlacklist) {
                 currentMode = PackageFilterManager.FilterMode.BLACKLIST;
             } else {
                 currentMode = PackageFilterManager.FilterMode.DISABLED;
@@ -112,19 +117,13 @@ public class FilterSettingsActivity extends AppCompatActivity {
 
     private void updateListVisibility() {
         if (currentMode == PackageFilterManager.FilterMode.DISABLED) {
-            textViewListLabel.setVisibility(View.GONE);
-            listViewPackages.setVisibility(View.GONE);
-            btnAddPackage.setVisibility(View.GONE);
+            cardPackageList.setVisibility(View.GONE);
         } else {
-            textViewListLabel.setVisibility(View.VISIBLE);
-            listViewPackages.setVisibility(View.VISIBLE);
-            btnAddPackage.setVisibility(View.VISIBLE);
-
-            if (currentMode == PackageFilterManager.FilterMode.WHITELIST) {
-                textViewListLabel.setText(R.string.filter_whitelist);
-            } else {
-                textViewListLabel.setText(R.string.filter_blacklist);
-            }
+            cardPackageList.setVisibility(View.VISIBLE);
+            textViewListLabel.setText(
+                    currentMode == PackageFilterManager.FilterMode.WHITELIST
+                            ? R.string.filter_whitelist
+                            : R.string.filter_blacklist);
         }
     }
 
@@ -144,44 +143,47 @@ public class FilterSettingsActivity extends AppCompatActivity {
             @Override
             public View getView(int position, View convertView, ViewGroup parent) {
                 TextView view = (TextView) super.getView(position, convertView, parent);
-                view.setPadding(16, 24, 16, 24);
+                view.setPadding(16, 16, 16, 16);
+                view.setTextAppearance(com.google.android.material.R.style.TextAppearance_Material3_BodyMedium);
                 return view;
             }
         };
         listViewPackages.setAdapter(adapter);
 
-        // 空列表提示
         View emptyView = findViewById(R.id.textViewEmpty);
         listViewPackages.setEmptyView(emptyView);
     }
 
     private void showAddPackageDialog() {
-        AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        builder.setTitle(R.string.add_package);
+        TextInputLayout til = new TextInputLayout(this);
+        til.setHint("Package name (e.g. com.example.app)");
+        til.setPadding(32, 24, 32, 0);
 
-        final EditText input = new EditText(this);
+        TextInputEditText input = new TextInputEditText(this);
         input.setHint(R.string.package_name_hint);
-        input.setPadding(32, 16, 32, 16);
-        builder.setView(input);
+        til.addView(input);
 
-        builder.setPositiveButton("Add", (dialog, which) -> {
-            String packageName = input.getText().toString().trim();
-            if (packageName.isEmpty()) {
-                Toast.makeText(this, "Please enter a package name", Toast.LENGTH_SHORT).show();
-                return;
-            }
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.add_package)
+                .setView(til)
+                .setPositiveButton("Add", (dialog, which) -> {
+                    String packageName = input.getText().toString().trim();
+                    if (packageName.isEmpty()) {
+                        Toast.makeText(this, "Please enter a package name", Toast.LENGTH_SHORT).show();
+                        return;
+                    }
 
-            if (currentMode == PackageFilterManager.FilterMode.WHITELIST) {
-                PackageFilterManager.addToWhitelist(this, packageName);
-            } else if (currentMode == PackageFilterManager.FilterMode.BLACKLIST) {
-                PackageFilterManager.addToBlacklist(this, packageName);
-            }
+                    if (currentMode == PackageFilterManager.FilterMode.WHITELIST) {
+                        PackageFilterManager.addToWhitelist(this, packageName);
+                    } else {
+                        PackageFilterManager.addToBlacklist(this, packageName);
+                    }
 
-            refreshPackageList();
-            Toast.makeText(this, "Added: " + packageName, Toast.LENGTH_SHORT).show();
-        });
-        builder.setNegativeButton("Cancel", null);
-        builder.show();
+                    refreshPackageList();
+                    Toast.makeText(this, "Added: " + packageName, Toast.LENGTH_SHORT).show();
+                })
+                .setNegativeButton("Cancel", null)
+                .show();
     }
 
     private void showDeleteDialog(String packageName) {
@@ -191,7 +193,7 @@ public class FilterSettingsActivity extends AppCompatActivity {
                 .setPositiveButton("Remove", (dialog, which) -> {
                     if (currentMode == PackageFilterManager.FilterMode.WHITELIST) {
                         PackageFilterManager.removeFromWhitelist(this, packageName);
-                    } else if (currentMode == PackageFilterManager.FilterMode.BLACKLIST) {
+                    } else {
                         PackageFilterManager.removeFromBlacklist(this, packageName);
                     }
                     refreshPackageList();

@@ -4,21 +4,22 @@ import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.view.View;
-import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
-import android.widget.Button;
-import android.widget.EditText;
 import android.widget.ProgressBar;
-import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.activity.EdgeToEdge;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.content.ContextCompat;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 
+import com.google.android.material.button.MaterialButton;
+import com.google.android.material.card.MaterialCardView;
+import com.google.android.material.textfield.MaterialAutoCompleteTextView;
+import com.google.android.material.textfield.TextInputEditText;
 import com.wu1015.sbnotificationbox.R;
 
 import java.util.ArrayList;
@@ -26,13 +27,14 @@ import java.util.List;
 
 public class MailSendActivity extends AppCompatActivity {
 
-    private Spinner spinnerProvider;
-    private EditText editTextId;
-    private EditText editTextPassword;
-    private EditText editTextToMail;
-    private EditText editTextSmtpHost;
-    private EditText editTextSmtpPort;
-    private Button btnLogin;
+    private MaterialAutoCompleteTextView spinnerProvider;
+    private TextInputEditText editTextId;
+    private TextInputEditText editTextPassword;
+    private TextInputEditText editTextToMail;
+    private TextInputEditText editTextSmtpHost;
+    private TextInputEditText editTextSmtpPort;
+    private MaterialCardView cardCustomSmtp;
+    private MaterialButton btnLogin;
     private ProgressBar progressBar;
     private TextView textViewStatus;
 
@@ -50,7 +52,7 @@ public class MailSendActivity extends AppCompatActivity {
         });
 
         initViews();
-        setupProviderSpinner();
+        setupProviderDropdown();
         setupEmailAutoDetect();
         setupLoginButton();
     }
@@ -62,15 +64,15 @@ public class MailSendActivity extends AppCompatActivity {
         editTextToMail = findViewById(R.id.editTextText2);
         editTextSmtpHost = findViewById(R.id.editTextSmtpHost);
         editTextSmtpPort = findViewById(R.id.editTextSmtpPort);
+        cardCustomSmtp = findViewById(R.id.cardCustomSmtp);
         btnLogin = findViewById(R.id.button);
         progressBar = findViewById(R.id.progressBar);
         textViewStatus = findViewById(R.id.textViewStatus);
     }
 
-    private void setupProviderSpinner() {
-        // 构建提供商列表（Auto Detect + 所有内置提供商 + Custom）
+    private void setupProviderDropdown() {
         providerList = new ArrayList<>();
-        providerList.add(null); // null 代表自动检测
+        providerList.add(null); // 自动检测
 
         List<String> displayNames = new ArrayList<>();
         displayNames.add(getString(R.string.provider_auto));
@@ -78,42 +80,24 @@ public class MailSendActivity extends AppCompatActivity {
         for (EmailSender.Provider provider : EmailSender.Provider.values()) {
             if (provider != EmailSender.Provider.CUSTOM) {
                 providerList.add(provider);
-                displayNames.add(provider.getDisplayName() + " (" + provider.getHost() + ":" + provider.getPort() + ")");
+                displayNames.add(provider.getDisplayName());
             }
         }
-        // 最后加入自定义选项
         providerList.add(EmailSender.Provider.CUSTOM);
         displayNames.add(getString(R.string.provider_custom));
 
         ArrayAdapter<String> adapter = new ArrayAdapter<>(
-                this, android.R.layout.simple_spinner_item, displayNames);
-        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+                this, android.R.layout.simple_dropdown_item_1line, displayNames);
         spinnerProvider.setAdapter(adapter);
+        spinnerProvider.setText(displayNames.get(0), false); // 默认显示 Auto Detect
 
-        spinnerProvider.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
-            @Override
-            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                EmailSender.Provider selected = providerList.get(position);
-                if (selected == EmailSender.Provider.CUSTOM) {
-                    // 显示自定义 SMTP 配置
-                    editTextSmtpHost.setVisibility(View.VISIBLE);
-                    editTextSmtpPort.setVisibility(View.VISIBLE);
-                } else {
-                    editTextSmtpHost.setVisibility(View.GONE);
-                    editTextSmtpPort.setVisibility(View.GONE);
-                }
-            }
-
-            @Override
-            public void onNothingSelected(AdapterView<?> parent) {
-                // 不做任何操作
-            }
+        spinnerProvider.setOnItemClickListener((parent, view, position, id) -> {
+            EmailSender.Provider selected = providerList.get(position);
+            cardCustomSmtp.setVisibility(
+                    selected == EmailSender.Provider.CUSTOM ? View.VISIBLE : View.GONE);
         });
     }
 
-    /**
-     * 当用户在邮箱地址栏输入时，自动检测并选择对应的提供商
-     */
     private void setupEmailAutoDetect() {
         editTextId.addTextChangedListener(new TextWatcher() {
             @Override
@@ -125,13 +109,16 @@ public class MailSendActivity extends AppCompatActivity {
             @Override
             public void afterTextChanged(Editable s) {
                 String email = s.toString().trim();
-                // 仅当 spinner 当前为"Auto Detect"时才自动切换
-                if (spinnerProvider.getSelectedItemPosition() == 0 && email.contains("@")) {
+                // 仅当当前选择为 Auto Detect 时自动切换
+                int pos = spinnerProvider.getListSelection();
+                if (pos == 0 && email.contains("@")) {
                     EmailSender.Provider detected = EmailSender.detectProvider(email);
                     if (detected != EmailSender.Provider.CUSTOM) {
                         int index = providerList.indexOf(detected);
                         if (index >= 0) {
-                            spinnerProvider.setSelection(index);
+                            spinnerProvider.setText(
+                                    spinnerProvider.getAdapter().getItem(index).toString(), false);
+                            cardCustomSmtp.setVisibility(View.GONE);
                         }
                     }
                 }
@@ -159,11 +146,9 @@ public class MailSendActivity extends AppCompatActivity {
                 return;
             }
 
-            // 显示加载状态
             setLoading(true);
 
-            // 获取选中的提供商
-            int selectedPos = spinnerProvider.getSelectedItemPosition();
+            int selectedPos = spinnerProvider.getListSelection();
             EmailSender.Provider selectedProvider = providerList.get(selectedPos);
 
             new Thread(() -> {
@@ -171,10 +156,8 @@ public class MailSendActivity extends AppCompatActivity {
                     boolean success;
 
                     if (selectedProvider == null) {
-                        // 自动检测
                         success = EmailSender.sendTestEmail(account, password, toMail);
                     } else if (selectedProvider == EmailSender.Provider.CUSTOM) {
-                        // 自定义 SMTP
                         String smtpHost = editTextSmtpHost.getText().toString().trim();
                         String smtpPort = editTextSmtpPort.getText().toString().trim();
                         if (smtpHost.isEmpty() || smtpPort.isEmpty()) {
@@ -189,7 +172,6 @@ public class MailSendActivity extends AppCompatActivity {
                                 "[SBNotificationBox] Test Email",
                                 "Hello! This is a test email from SBNotificationBox.");
                     } else {
-                        // 使用指定提供商
                         EmailSender.initSession(selectedProvider, account, password);
                         success = EmailSender.sendEmail2(account, toMail,
                                 "[SBNotificationBox] Test Email",
@@ -198,21 +180,21 @@ public class MailSendActivity extends AppCompatActivity {
                     }
 
                     if (success) {
-                        // 存储邮箱配置
                         SecureEmailPreferences.saveEmail(getBaseContext(), account, toMail);
                         runOnUiThread(() -> {
                             setLoading(false);
                             textViewStatus.setText(R.string.send_success);
-                            textViewStatus.setTextColor(getColor(android.R.color.holo_green_dark));
+                            textViewStatus.setTextColor(ContextCompat.getColor(
+                                    MailSendActivity.this, R.color.primary));
                             showToastOnUi(getString(R.string.send_success));
-                            // 延迟返回主界面
                             findViewById(R.id.main).postDelayed(this::finish, 1000);
                         });
                     } else {
                         runOnUiThread(() -> {
                             setLoading(false);
                             textViewStatus.setText(R.string.send_failed);
-                            textViewStatus.setTextColor(getColor(android.R.color.holo_red_dark));
+                            textViewStatus.setTextColor(ContextCompat.getColor(
+                                    MailSendActivity.this, R.color.error));
                             showToastOnUi(getString(R.string.send_failed));
                         });
                     }
@@ -220,23 +202,18 @@ public class MailSendActivity extends AppCompatActivity {
                     runOnUiThread(() -> {
                         setLoading(false);
                         textViewStatus.setText(getString(R.string.send_failed) + ": " + e.getMessage());
-                        textViewStatus.setTextColor(getColor(android.R.color.holo_red_dark));
+                        textViewStatus.setTextColor(ContextCompat.getColor(
+                                MailSendActivity.this, R.color.error));
                     });
                 }
             }).start();
         });
     }
 
-    /**
-     * 简单的邮箱格式验证
-     */
     private boolean isValidEmail(String email) {
         return email != null && email.contains("@") && email.contains(".") && email.length() > 5;
     }
 
-    /**
-     * 设置加载状态（禁用输入，显示进度条）
-     */
     private void setLoading(boolean loading) {
         btnLogin.setEnabled(!loading);
         btnLogin.setVisibility(loading ? View.INVISIBLE : View.VISIBLE);
@@ -249,13 +226,10 @@ public class MailSendActivity extends AppCompatActivity {
         editTextSmtpPort.setEnabled(!loading);
         if (loading) {
             textViewStatus.setText(R.string.sending);
-            textViewStatus.setTextColor(getColor(android.R.color.holo_blue_dark));
+            textViewStatus.setTextColor(ContextCompat.getColor(this, R.color.secondary));
         }
     }
 
-    /**
-     * 在主线程显示 Toast（可从后台线程安全调用）
-     */
     private void showToastOnUi(String message) {
         runOnUiThread(() -> Toast.makeText(getBaseContext(), message, Toast.LENGTH_LONG).show());
     }

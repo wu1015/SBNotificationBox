@@ -1,7 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <!-- Base application theme. -->
+    <!-- ===== MD3 Dark Theme ===== -->
     <style name="Base.Theme.SBNotificationBox" parent="Theme.Material3.DayNight.NoActionBar">
-        <!-- Customize your dark theme here. -->
-        <!-- <item name="colorPrimary">@color/my_dark_primary</item> -->
+        <!-- Primary -->
+        <item name="colorPrimary">@color/md_theme_dark_primary</item>
+        <item name="colorOnPrimary">@color/md_theme_dark_on_primary</item>
+        <item name="colorPrimaryContainer">@color/md_theme_dark_primary_container</item>
+        <item name="colorOnPrimaryContainer">@color/md_theme_dark_on_primary_container</item>
+
+        <!-- Secondary -->
+        <item name="colorSecondary">@color/md_theme_dark_secondary</item>
+        <item name="colorOnSecondary">@color/md_theme_dark_on_secondary</item>
+        <item name="colorSecondaryContainer">@color/md_theme_dark_secondary_container</item>
+        <item name="colorOnSecondaryContainer">@color/md_theme_dark_on_secondary_container</item>
+
+        <!-- Tertiary -->
+        <item name="colorTertiary">@color/md_theme_dark_tertiary</item>
+        <item name="colorOnTertiary">@color/md_theme_dark_on_tertiary</item>
+        <item name="colorTertiaryContainer">@color/md_theme_dark_tertiary_container</item>
+        <item name="colorOnTertiaryContainer">@color/md_theme_dark_on_tertiary_container</item>
+
+        <!-- Error -->
+        <item name="colorError">@color/md_theme_dark_error</item>
+        <item name="colorOnError">@color/md_theme_dark_on_error</item>
+        <item name="colorErrorContainer">@color/md_theme_dark_error_container</item>
+        <item name="colorOnErrorContainer">@color/md_theme_dark_on_error_container</item>
+
+        <!-- Surface & Background -->
+        <item name="android:colorBackground">@color/md_theme_dark_surface</item>
+        <item name="colorSurface">@color/md_theme_dark_surface</item>
+        <item name="colorOnSurface">@color/md_theme_dark_on_surface</item>
+        <item name="colorSurfaceVariant">@color/md_theme_dark_surface_variant</item>
+        <item name="colorOnSurfaceVariant">@color/md_theme_dark_on_surface_variant</item>
+
+        <!-- Outline -->
+        <item name="colorOutline">@color/md_theme_dark_outline</item>
+
+        <!-- Status bar -->
+        <item name="android:statusBarColor">@color/md_theme_dark_surface</item>
+        <item name="android:navigationBarColor">@color/md_theme_dark_surface</item>
+    </style>
+
+    <style name="Theme.SBNotificationBox" parent="Base.Theme.SBNotificationBox" />
+
+    <!-- Card override for dark -->
+    <style name="AppCard.Outlined">
+        <item name="cardCornerRadius">16dp</item>
+        <item name="contentPadding">16dp</item>
+        <item name="strokeWidth">1dp</item>
+        <item name="strokeColor">@color/md_theme_dark_outline</item>
     </style>
 </resources>

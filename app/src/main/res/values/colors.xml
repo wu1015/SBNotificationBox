@@ -1,6 +1,87 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- ===== MD3 Primary (Blue-Violet seed) ===== -->
+    <color name="primary">#FF435E91</color>
+    <color name="on_primary">#FFFFFFFF</color>
+    <color name="primary_container">#FFDAE1FF</color>
+    <color name="on_primary_container">#FF001847</color>
+
+    <!-- ===== MD3 Secondary ===== -->
+    <color name="secondary">#FF585E71</color>
+    <color name="on_secondary">#FFFFFFFF</color>
+    <color name="secondary_container">#FFDCE2F9</color>
+    <color name="on_secondary_container">#FF151B2C</color>
+
+    <!-- ===== MD3 Tertiary ===== -->
+    <color name="tertiary">#FF735572</color>
+    <color name="on_tertiary">#FFFFFFFF</color>
+    <color name="tertiary_container">#FFFED7FA</color>
+    <color name="on_tertiary_container">#FF2A132B</color>
+
+    <!-- ===== MD3 Error ===== -->
+    <color name="error">#FFBA1A1A</color>
+    <color name="on_error">#FFFFFFFF</color>
+    <color name="error_container">#FFFFDAD6</color>
+    <color name="on_error_container">#FF410002</color>
+
+    <!-- ===== MD3 Surface & Background ===== -->
+    <color name="md_theme_light_surface">#FFFEFBFF</color>
+    <color name="md_theme_light_on_surface">#FF1B1B1F</color>
+    <color name="md_theme_light_surface_variant">#FFE2E1EC</color>
+    <color name="md_theme_light_on_surface_variant">#FF45464F</color>
+    <color name="md_theme_light_outline">#FF757680</color>
+    <color name="md_theme_light_inverse_surface">#FF303034</color>
+
+    <!-- ===== MD3 Surface Tint Colors (Light) ===== -->
+    <color name="surface_1">#FFF2F0FF</color>
+    <color name="surface_2">#FFEDEBFF</color>
+    <color name="surface_3">#FFE8E5FF</color>
+    <color name="surface_4">#FFE6E3FF</color>
+    <color name="surface_5">#FFE2DFFF</color>
+
+    <!-- ===== Dark Theme ===== -->
+    <color name="md_theme_dark_primary">#FFB0C5FF</color>
+    <color name="md_theme_dark_on_primary">#FF002F66</color>
+    <color name="md_theme_dark_primary_container">#FF2B4578</color>
+    <color name="md_theme_dark_on_primary_container">#FFDAE1FF</color>
+
+    <color name="md_theme_dark_secondary">#FFC0C6DD</color>
+    <color name="md_theme_dark_on_secondary">#FF2A3042</color>
+    <color name="md_theme_dark_secondary_container">#FF404659</color>
+    <color name="md_theme_dark_on_secondary_container">#FFDCE2F9</color>
+
+    <color name="md_theme_dark_tertiary">#FFE1BBDD</color>
+    <color name="md_theme_dark_on_tertiary">#FF412842</color>
+    <color name="md_theme_dark_tertiary_container">#FF5A3E59</color>
+    <color name="md_theme_dark_on_tertiary_container">#FFFED7FA</color>
+
+    <color name="md_theme_dark_error">#FFFFB4AB</color>
+    <color name="md_theme_dark_on_error">#FF690005</color>
+    <color name="md_theme_dark_error_container">#FF93000A</color>
+    <color name="md_theme_dark_on_error_container">#FFFFDAD6</color>
+
+    <color name="md_theme_dark_surface">#FF1B1B1F</color>
+    <color name="md_theme_dark_on_surface">#FFE4E1E6</color>
+    <color name="md_theme_dark_surface_variant">#FF45464F</color>
+    <color name="md_theme_dark_on_surface_variant">#FFC6C5D0</color>
+    <color name="md_theme_dark_outline">#FF90909A</color>
+
+    <color name="md_theme_dark_surface_1">#FF24242C</color>
+    <color name="md_theme_dark_surface_2">#FF2A2932</color>
+    <color name="md_theme_dark_surface_3">#FF302F38</color>
+    <color name="md_theme_dark_surface_4">#FF32313A</color>
+    <color name="md_theme_dark_surface_5">#FF37353F</color>
+
+    <!-- ===== Legacy (keep for fallback) ===== -->
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
     <color name="liteWhite">#706D6D</color>
+
+    <!-- ===== Widget colors ===== -->
+    <color name="widget_bg_dark">#E61C1B1F</color>
+    <color name="widget_bg_light">#E6FEFBFF</color>
+    <color name="widget_text_primary_dark">#FFE4E1E6</color>
+    <color name="widget_text_primary_light">#FF1B1B1F</color>
+    <color name="widget_text_secondary_dark">#FFC6C5D0</color>
+    <color name="widget_text_secondary_light">#FF45464F</color>
 </resources>

@@ -12,17 +12,19 @@ import android.os.Build;
 import android.os.Bundle;
 import android.provider.Settings;
 import android.view.View;
-import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.activity.EdgeToEdge;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.NotificationCompat;
+import androidx.core.content.ContextCompat;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 
+import com.google.android.material.button.MaterialButton;
+import com.google.android.material.card.MaterialCardView;
 import com.wu1015.sbnotificationbox.historymanager.HistoryManagerActivity;
 import com.wu1015.sbnotificationbox.mailsend.FilterSettingsActivity;
 import com.wu1015.sbnotificationbox.mailsend.MailSendActivity;
@@ -42,14 +44,15 @@ public class MainActivity extends AppCompatActivity {
 
     private static final int REQUEST_NOTIFICATION_LISTENER = 1002;
 
+    private MaterialCardView cardLog;
+    private TextView textviewLog;
+    private TextView textViewMailStatus;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         EdgeToEdge.enable(this);
         setContentView(R.layout.activity_main);
-
-        // 检查并请求通知监听权限
-        checkAndRequestNotificationListenerPermission();
 
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main), (v, insets) -> {
             Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
@@ -57,45 +60,53 @@ public class MainActivity extends AppCompatActivity {
             return insets;
         });
 
+        initViews();
+
+        // 检查并请求通知监听权限
+        checkAndRequestNotificationListenerPermission();
+    }
+
+    private void initViews() {
+        cardLog = findViewById(R.id.cardLog);
+        textviewLog = findViewById(R.id.textview);
+        textViewMailStatus = findViewById(R.id.textView2);
+
         // 按钮：发送测试通知
-        Button btnSendNotification = findViewById(R.id.button);
+        MaterialButton btnSendNotification = findViewById(R.id.button);
         btnSendNotification.setOnClickListener(v -> sendTestNotification());
 
         // 按钮：显示文件并删除
-        Button btnShowFile = findViewById(R.id.button2);
+        MaterialButton btnShowFile = findViewById(R.id.button2);
         btnShowFile.setOnClickListener(v -> showFileAndDelete());
 
-        // 按钮：进入邮件登录
-        Button btnMailLogin = findViewById(R.id.button3);
+        // 按钮：邮件登录
+        MaterialButton btnMailLogin = findViewById(R.id.button3);
         btnMailLogin.setOnClickListener(v -> navigateTo(MailSendActivity.class));
 
-        // 按钮：进入历史管理
-        Button btnHistory = findViewById(R.id.button4);
+        // 按钮：历史管理
+        MaterialButton btnHistory = findViewById(R.id.button4);
         btnHistory.setOnClickListener(v -> navigateTo(HistoryManagerActivity.class));
 
-        // 按钮：进入过滤设置
-        Button btnFilter = findViewById(R.id.button5);
+        // 按钮：过滤设置
+        MaterialButton btnFilter = findViewById(R.id.button5);
         btnFilter.setOnClickListener(v -> navigateTo(FilterSettingsActivity.class));
-
-        // 显示邮件会话状态
-        updateMailStatus();
     }
 
     @Override
     protected void onResume() {
         super.onResume();
-        // 每次从其他页面返回时刷新邮件状态
         updateMailStatus();
     }
 
     private void updateMailStatus() {
-        TextView mailStatus = findViewById(R.id.textView2);
         Session session = MailSessionManager.getSession();
         if (session == null) {
-            mailStatus.setText("Mail: not configured");
+            textViewMailStatus.setText("Not configured");
+            textViewMailStatus.setTextColor(ContextCompat.getColor(this, R.color.error));
         } else {
             String email = MailSessionManager.getCurrentEmail();
-            mailStatus.setText(email != null ? "Mail: " + email : "Mail: configured");
+            textViewMailStatus.setText(email != null ? email : "Configured");
+            textViewMailStatus.setTextColor(ContextCompat.getColor(this, R.color.primary));
         }
     }
 
@@ -104,7 +115,6 @@ public class MainActivity extends AppCompatActivity {
         NotificationManager mNotificationManager =
                 (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
 
-        // 创建 NotificationChannel
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             NotificationChannel channel = new NotificationChannel("Channel_ID",
                     "chat message", NotificationManager.IMPORTANCE_DEFAULT);
@@ -125,12 +135,11 @@ public class MainActivity extends AppCompatActivity {
         String currentDate = getCurrentDate();
         String fileName = currentDate + "_notifications_log.md";
 
-        // 读取文件内容
         String fileContent = readFile(fileName);
 
-        // 显示文件内容
-        TextView textView = findViewById(R.id.textview);
-        textView.setText(fileContent.isEmpty() ? "(no notifications today)" : fileContent);
+        // 显示日志卡片
+        cardLog.setVisibility(View.VISIBLE);
+        textviewLog.setText(fileContent.isEmpty() ? "(no notifications today)" : fileContent);
 
         // 删除所有 md 文件
         boolean deleted = delAllFiles(getBaseContext());
@@ -138,25 +147,23 @@ public class MainActivity extends AppCompatActivity {
                 deleted ? "Files deleted" : "No files to delete or failed",
                 Toast.LENGTH_LONG).show();
 
-        // 清空小部件
+        // 清空并更新小部件
         NotificationWidgetProvider.clearWidgetItems();
         NotificationWidgetProvider.updateWidget(getBaseContext());
     }
 
+    /**
+     * 页面导航（不需要后台线程）
+     */
     private void navigateTo(Class<?> targetActivity) {
-        new Thread(() -> {
-            Intent intent = new Intent(getApplicationContext(), targetActivity);
-            startActivity(intent);
-        }).start();
+        startActivity(new Intent(this, targetActivity));
     }
 
-    // 获取当前日期，格式为 yyyyMMdd
     @SuppressLint("SimpleDateFormat")
     private String getCurrentDate() {
         return new SimpleDateFormat("yyyyMMdd", Locale.US).format(new Date());
     }
 
-    // 读取文件内容
     private String readFile(String fileName) {
         FileInputStream fis = null;
         InputStreamReader reader = null;
@@ -171,18 +178,13 @@ public class MainActivity extends AppCompatActivity {
                 stringBuilder.append((char) charRead);
             }
         } catch (IOException e) {
-            // 文件不存在是正常的（当天还没有通知）
             return "";
         } finally {
             try {
-                if (reader != null) {
-                    reader.close();
-                }
-                if (fis != null) {
-                    fis.close();
-                }
+                if (reader != null) reader.close();
+                if (fis != null) fis.close();
             } catch (IOException e) {
-                // 忽略关闭异常
+                // ignore
             }
         }
 
@@ -192,22 +194,19 @@ public class MainActivity extends AppCompatActivity {
     private void checkAndRequestNotificationListenerPermission() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             String enabledListeners = Settings.Secure.getString(
-                    getContentResolver(),
-                    "enabled_notification_listeners");
+                    getContentResolver(), "enabled_notification_listeners");
 
-            String packageName = getPackageName();
             boolean isEnabled = enabledListeners != null &&
-                    enabledListeners.contains(packageName);
+                    enabledListeners.contains(getPackageName());
 
             if (!isEnabled) {
                 new AlertDialog.Builder(this)
                         .setTitle("Notification Listener Required")
                         .setMessage("This app needs notification listener permission to work. Please enable it in settings.")
-                        .setPositiveButton("Open Settings", (dialog, which) -> {
-                            Intent intent = new Intent(
-                                    "android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS");
-                            startActivityForResult(intent, REQUEST_NOTIFICATION_LISTENER);
-                        })
+                        .setPositiveButton("Open Settings", (dialog, which) ->
+                                startActivityForResult(new Intent(
+                                        "android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS"),
+                                        REQUEST_NOTIFICATION_LISTENER))
                         .setNegativeButton("Cancel", null)
                         .show();
             }
@@ -219,15 +218,12 @@ public class MainActivity extends AppCompatActivity {
         super.onActivityResult(requestCode, resultCode, data);
         if (requestCode == REQUEST_NOTIFICATION_LISTENER) {
             String enabledListeners = Settings.Secure.getString(
-                    getContentResolver(),
-                    "enabled_notification_listeners");
-
-            String packageName = getPackageName();
-            boolean isEnabled = enabledListeners != null &&
-                    enabledListeners.contains(packageName);
+                    getContentResolver(), "enabled_notification_listeners");
 
             Toast.makeText(this,
-                    isEnabled ? "Notification permission granted" : "Notification permission not granted",
+                    enabledListeners != null && enabledListeners.contains(getPackageName())
+                            ? "Notification permission granted"
+                            : "Notification permission not granted",
                     Toast.LENGTH_SHORT).show();
         }
     }
