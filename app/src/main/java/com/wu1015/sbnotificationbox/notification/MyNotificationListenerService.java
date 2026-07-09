@@ -24,7 +24,11 @@ import java.util.concurrent.Executors;
 
 public class MyNotificationListenerService extends NotificationListenerService {
 
-    private final ExecutorService executor = Executors.newCachedThreadPool();
+    private final ExecutorService executor = Executors.newCachedThreadPool(r -> {
+        Thread t = new Thread(r, "NotificationSender");
+        t.setDaemon(true); // daemon 线程不阻止进程退出
+        return t;
+    });
 
     @Override
     public void onNotificationPosted(StatusBarNotification sbn) {

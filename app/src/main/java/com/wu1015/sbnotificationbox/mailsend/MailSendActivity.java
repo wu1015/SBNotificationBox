@@ -162,6 +162,7 @@ public class MailSendActivity extends AppCompatActivity {
                         String smtpHost = editTextSmtpHost.getText().toString().trim();
                         String smtpPort = editTextSmtpPort.getText().toString().trim();
                         if (smtpHost.isEmpty() || smtpPort.isEmpty()) {
+                            if (isFinishing() || isDestroyed()) return;
                             runOnUiThread(() -> {
                                 setLoading(false);
                                 showToastOnUi("Please enter SMTP host and port");
@@ -180,9 +181,12 @@ public class MailSendActivity extends AppCompatActivity {
                                         + "Provider: " + selectedProvider.getDisplayName());
                     }
 
+                    if (isFinishing() || isDestroyed()) return;
+
                     if (success) {
                         SecureEmailPreferences.saveEmail(getBaseContext(), account, toMail);
                         runOnUiThread(() -> {
+                            if (isFinishing() || isDestroyed()) return;
                             setLoading(false);
                             textViewStatus.setText(R.string.send_success);
                             textViewStatus.setTextColor(ContextCompat.getColor(
@@ -192,6 +196,7 @@ public class MailSendActivity extends AppCompatActivity {
                         });
                     } else {
                         runOnUiThread(() -> {
+                            if (isFinishing() || isDestroyed()) return;
                             setLoading(false);
                             textViewStatus.setText(R.string.send_failed);
                             textViewStatus.setTextColor(ContextCompat.getColor(
@@ -200,7 +205,9 @@ public class MailSendActivity extends AppCompatActivity {
                         });
                     }
                 } catch (Exception e) {
+                    if (isFinishing() || isDestroyed()) return;
                     runOnUiThread(() -> {
+                        if (isFinishing() || isDestroyed()) return;
                         setLoading(false);
                         textViewStatus.setText(getString(R.string.send_failed) + ": " + e.getMessage());
                         textViewStatus.setTextColor(ContextCompat.getColor(

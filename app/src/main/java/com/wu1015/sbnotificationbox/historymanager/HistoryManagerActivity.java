@@ -11,7 +11,6 @@ import android.widget.Toast;
 import androidx.activity.EdgeToEdge;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.content.ContextCompat;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
@@ -140,6 +139,7 @@ public class HistoryManagerActivity extends AppCompatActivity {
 
     private class FileAdapter extends RecyclerView.Adapter<FileAdapter.FileViewHolder> {
         private ArrayList<MyNotificationFile> files;
+        private final SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US);
 
         public FileAdapter(ArrayList<MyNotificationFile> files) {
             this.files = files;
@@ -176,7 +176,6 @@ public class HistoryManagerActivity extends AppCompatActivity {
             holder.fileSize.setText(sizeText);
 
             long lastModified = fileObj.lastModified();
-            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US);
             holder.fileDate.setText(sdf.format(new Date(lastModified)));
 
             holder.itemView.setOnClickListener(v -> openFile(file));

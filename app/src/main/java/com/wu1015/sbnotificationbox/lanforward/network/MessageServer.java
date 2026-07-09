@@ -76,10 +76,20 @@ public class MessageServer {
 
     public void stop() {
         running.set(false);
+        // 先关闭 accept socket，让 accept() 抛出异常退出
         try {
             if (serverSocket != null) serverSocket.close();
         } catch (IOException ignored) {}
-        threadPool.shutdownNow();
+        // 使用 shutdown() 而非 shutdownNow()，让正在传输的客户端正常完成
+        threadPool.shutdown();
+        try {
+            if (!threadPool.awaitTermination(5, java.util.concurrent.TimeUnit.SECONDS)) {
+                threadPool.shutdownNow(); // 超时则强制中断
+            }
+        } catch (InterruptedException e) {
+            threadPool.shutdownNow();
+            Thread.currentThread().interrupt();
+        }
         Log.i(TAG, "Server stopped");
     }
 

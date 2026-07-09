@@ -13,8 +13,10 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.MulticastSocket;
+import java.net.NetworkInterface;
 import java.net.SocketTimeoutException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -138,6 +140,7 @@ public class DiscoveryService {
     private void sendBroadcast() {
         broadcastThread = new Thread(() -> {
             DatagramSocket sock = null;
+            acquireLock();
             try {
                 sock = new DatagramSocket();
                 sock.setBroadcast(true);
@@ -151,6 +154,7 @@ public class DiscoveryService {
                 Log.e(TAG, "Broadcast error", e);
             } finally {
                 closeQuietly(sock);
+                releaseLock();
             }
         }, "DiscoveryBroadcast");
         broadcastThread.start();
@@ -180,6 +184,7 @@ public class DiscoveryService {
             Log.e(TAG, "Listen error", e);
         } finally {
             closeQuietly(multicastSocket);
+            releaseLock(); // 确保在退出循环时释放锁
         }
     }
 
@@ -199,14 +204,27 @@ public class DiscoveryService {
                 String name = obj.optString("deviceName", "Unknown");
                 int port = obj.optInt("port", 9877);
                 String ip = packet.getAddress().getHostAddress();
-                // 排除自己
-                if (name.equals(deviceName)) return null;
+                // 排除自己（用 IP 而非设备名，避免同名设备互相排斥）
+                if (isLocalAddress(ip)) return null;
                 return new LanDevice(name, ip, port);
             }
         } catch (Exception e) {
             Log.w(TAG, "Failed to parse discovery response", e);
         }
         return null;
+    }
+
+    /** 检查 IP 是否是本机地址 */
+    private static boolean isLocalAddress(String ip) {
+        try {
+            for (NetworkInterface ni : Collections.list(
+                    NetworkInterface.getNetworkInterfaces())) {
+                for (InetAddress addr : Collections.list(ni.getInetAddresses())) {
+                    if (addr.getHostAddress().equals(ip)) return true;
+                }
+            }
+        } catch (Exception ignored) {}
+        return false;
     }
 
     private void acquireLock() {

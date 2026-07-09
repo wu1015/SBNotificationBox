@@ -3,7 +3,6 @@ package com.wu1015.sbnotificationbox.lanforward.ui;
 import android.app.AlertDialog;
 import android.os.Bundle;
 import android.os.Environment;
-import android.view.View;
 import android.widget.Toast;
 
 import androidx.activity.EdgeToEdge;
@@ -18,7 +17,6 @@ import com.wu1015.sbnotificationbox.R;
 import com.wu1015.sbnotificationbox.lanforward.storage.LanPreferences;
 
 import java.io.File;
-import java.util.Arrays;
 
 public class LanSettingsActivity extends AppCompatActivity {
 
