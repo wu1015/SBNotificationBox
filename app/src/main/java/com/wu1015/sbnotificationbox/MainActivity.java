@@ -26,6 +26,7 @@ import androidx.core.view.WindowInsetsCompat;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.card.MaterialCardView;
 import com.wu1015.sbnotificationbox.historymanager.HistoryManagerActivity;
+import com.wu1015.sbnotificationbox.lanforward.network.LanManager;
 import com.wu1015.sbnotificationbox.lanforward.ui.LanForwardActivity;
 import com.wu1015.sbnotificationbox.mailsend.FilterSettingsActivity;
 import com.wu1015.sbnotificationbox.mailsend.MailSendActivity;
@@ -48,6 +49,7 @@ public class MainActivity extends AppCompatActivity {
     private MaterialCardView cardLog;
     private TextView textviewLog;
     private TextView textViewMailStatus;
+    private TextView textViewLanStatus;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -71,6 +73,7 @@ public class MainActivity extends AppCompatActivity {
         cardLog = findViewById(R.id.cardLog);
         textviewLog = findViewById(R.id.textview);
         textViewMailStatus = findViewById(R.id.textView2);
+        textViewLanStatus = findViewById(R.id.textViewLanStatus);
 
         // 按钮：发送测试通知
         MaterialButton btnSendNotification = findViewById(R.id.button);
@@ -112,6 +115,17 @@ public class MainActivity extends AppCompatActivity {
             String email = MailSessionManager.getCurrentEmail();
             textViewMailStatus.setText(email != null ? email : "Configured");
             textViewMailStatus.setTextColor(ContextCompat.getColor(this, R.color.primary));
+        }
+
+        // 局域网转发状态
+        LanManager lan = LanManager.getInstance(this);
+        if (lan.isRunning()) {
+            int count = lan.getDeviceCount();
+            textViewLanStatus.setText("Running (" + count + " device" + (count != 1 ? "s" : "") + ")");
+            textViewLanStatus.setTextColor(ContextCompat.getColor(this, R.color.primary));
+        } else {
+            textViewLanStatus.setText("Stopped");
+            textViewLanStatus.setTextColor(ContextCompat.getColor(this, R.color.error));
         }
     }
 

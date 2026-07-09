@@ -143,6 +143,17 @@ public class MessageServer {
         if (listener != null) {
             listener.onTextMessage(msg);
         }
+
+        // 发送 ACK 响应，让客户端知道发送成功
+        try {
+            OutputStream out = client.getOutputStream();
+            JSONObject ack = new JSONObject();
+            ack.put("status", "ok");
+            out.write((ack.toString() + "\n").getBytes("UTF-8"));
+            out.flush();
+        } catch (Exception e) {
+            Log.w(TAG, "Failed to send text ACK", e);
+        }
     }
 
     private void handleFileMessage(String deviceName, JSONObject header, String type,

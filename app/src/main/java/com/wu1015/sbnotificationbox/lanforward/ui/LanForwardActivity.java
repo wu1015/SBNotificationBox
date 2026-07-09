@@ -25,9 +25,7 @@ import com.google.android.material.textfield.TextInputEditText;
 import com.wu1015.sbnotificationbox.R;
 import com.wu1015.sbnotificationbox.lanforward.model.LanDevice;
 import com.wu1015.sbnotificationbox.lanforward.model.LanMessage;
-import com.wu1015.sbnotificationbox.lanforward.network.DiscoveryService;
-import com.wu1015.sbnotificationbox.lanforward.network.MessageClient;
-import com.wu1015.sbnotificationbox.lanforward.network.MessageServer;
+import com.wu1015.sbnotificationbox.lanforward.network.LanManager;
 import com.wu1015.sbnotificationbox.lanforward.storage.LanPreferences;
 import com.wu1015.sbnotificationbox.notification.MyNotification;
 import com.wu1015.sbnotificationbox.notification.NotificationWidgetProvider;
@@ -36,13 +34,10 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 
 public class LanForwardActivity extends AppCompatActivity {
-
-    private static final int SERVER_PORT = 9877;
 
     private ListView listViewDevices;
     private ListView listViewMessages;
@@ -54,10 +49,10 @@ public class LanForwardActivity extends AppCompatActivity {
     private ArrayAdapter<String> deviceAdapter;
     private ArrayAdapter<String> messageAdapter;
 
-    private MessageServer messageServer;
-    private DiscoveryService discoveryService;
+    private LanManager lanManager;
+    private LanManager.LanStatusListener lanListener;
     private LanDevice selectedDevice;
-    private AlertDialog pendingFileDialog; // 待确认的文件接收对话框
+    private AlertDialog pendingFileDialog;
 
     private String myDeviceName;
 
@@ -150,146 +145,60 @@ public class LanForwardActivity extends AppCompatActivity {
         listViewMessages.setAdapter(messageAdapter);
     }
 
-    // === 服务器 ===
+    // === 服务器 + 持续发现（使用 LanManager 单例） ===
 
     private void startServer() {
-        String saveDir = LanPreferences.getStorageDir(this);
-        new File(saveDir).mkdirs();
+        lanManager = LanManager.getInstance(this);
+        lanManager.start();
 
-        messageServer = new MessageServer(SERVER_PORT, saveDir, new MessageServer.MessageListener() {
+        // 注册消息监听器（文字消息显示在 UI + 小组件）
+        lanListener = new LanManager.LanStatusListener() {
             @Override
-            public void onTextMessage(LanMessage message) {
+            public void onStatusChanged(boolean running, int deviceCount) {
+                // 设备列表由 doScan/rescan 更新
+            }
+
+            @Override
+            public void onTextReceived(LanMessage message) {
                 runOnUiThread(() -> {
                     messageList.add(message);
                     messageAdapter.notifyDataSetChanged();
-                    // 文字消息显示在小组件上
-                    NotificationWidgetProvider.addItemToWidget(
-                            new MyNotification("LAN:" + message.getDeviceName(), message.getContent()));
-                    NotificationWidgetProvider.updateWidget(getApplicationContext());
-                });
-            }
-
-            @Override
-            public LanMessage onFileMessageRequest(LanMessage message) {
-                // 使用 CountDownLatch 阻塞等待用户确认（最多 30 秒）
-                java.util.concurrent.CountDownLatch latch = new java.util.concurrent.CountDownLatch(1);
-                LanMessage[] result = new LanMessage[1];
-
-                runOnUiThread(() -> {
-                    if (isFinishing() || isDestroyed()) {
-                        latch.countDown();
-                        return;
+                    if (message.getType() == LanMessage.Type.TEXT) {
+                        NotificationWidgetProvider.addItemToWidget(
+                                new MyNotification("LAN:" + message.getDeviceName(),
+                                        message.getContent()));
+                        NotificationWidgetProvider.updateWidget(getApplicationContext());
                     }
-                    pendingFileDialog = new AlertDialog.Builder(LanForwardActivity.this)
-                            .setTitle("Receive File?")
-                            .setMessage(message.getDeviceName() + " wants to send:\n"
-                                    + message.getFileName() + "\n"
-                                    + formatSize(message.getFileSize()))
-                            .setPositiveButton("Accept", (d, w) -> {
-                                pendingFileDialog = null;
-                                message.setFileReceived(true);
-                                result[0] = message;
-                                latch.countDown();
-                            })
-                            .setNegativeButton("Reject", (d, w) -> {
-                                pendingFileDialog = null;
-                                result[0] = null;
-                                latch.countDown();
-                            })
-                            .setOnDismissListener(d -> {
-                                pendingFileDialog = null;
-                                if (latch.getCount() > 0) {
-                                    result[0] = null;
-                                    latch.countDown();
-                                }
-                            })
-                            .setCancelable(true) // 用户可取消，取消=拒绝
-                            .show();
-                });
-
-                try {
-                    // 30 秒超时，防止 Activity 销毁后线程永久阻塞
-                    if (!latch.await(30, java.util.concurrent.TimeUnit.SECONDS)) {
-                        return null;
-                    }
-                } catch (InterruptedException e) {
-                    return null;
-                }
-                return result[0];
-            }
-
-            @Override
-            public void onFileReceived(LanMessage message) {
-                runOnUiThread(() -> {
-                    messageList.add(message);
-                    messageAdapter.notifyDataSetChanged();
-                    Toast.makeText(LanForwardActivity.this,
-                            "File received: " + message.getFileName(), Toast.LENGTH_LONG).show();
                 });
             }
-        });
-        messageServer.start();
+        };
+        lanManager.addListener(lanListener);
     }
 
     // === 设备发现 ===
 
+    /** 手动扫描：重发广播 + 刷新列表 */
     private void doScan() {
-        deviceList.clear();
-        deviceAdapter.notifyDataSetChanged();
         Toast.makeText(this, "Scanning...", Toast.LENGTH_SHORT).show();
 
-        // 使用线程安全集合，防止实时回调与下方 discoverOnce() 子线程并发修改列表导致崩溃
-        List<LanDevice> syncedList = Collections.synchronizedList(deviceList);
+        // 刷新设备列表（从 LanManager 获取）
+        deviceList.clear();
+        List<LanDevice> known = lanManager.getDevices();
+        deviceList.addAll(known);
+        deviceAdapter.notifyDataSetChanged();
 
-        // 修复位置：将 Lambda 改为匿名内部类 new DiscoveryListener()
-        discoveryService = new DiscoveryService(this, myDeviceName, SERVER_PORT, new DiscoveryService.DiscoveryListener() {
-            @Override
-            public void onDeviceFound(LanDevice device) { // 👈 请替换为您接口中接收设备的方法名
-                runOnUiThread(() -> {
-                    if (!isFinishing() && !isDestroyed() && !syncedList.contains(device)) {
-                        syncedList.add(device);
-                        deviceAdapter.notifyDataSetChanged();
-                    }
-                });
-            }
+        // 重新发送广播
+        lanManager.rescan();
 
-            @Override
-            public void onDiscoveryError(String error) {
-
-            }
-
-            // 🔴 注意：以下是占位方法！
-            // 您的 DiscoveryListener 报错提示“多个非重写抽象方法”，
-            // 请把该接口里【所有】其他的方法名都在这里 @Override 实现出来，哪怕留空不写逻辑。
-//            @Override
-//            public void onScanStarted() {
-//                // 如果有这个方法，留空即可
-//            }
-//
-//            @Override
-//            public void onScanFinished() {
-//                // 如果有这个方法，留空即可
-//            }
-        });
-
-        // 异步执行单次扫描
-        new Thread(() -> {
-            List<LanDevice> found = discoveryService.discoverOnce();
-            if (isFinishing() || isDestroyed()) return;
-            runOnUiThread(() -> {
-                // 再次检查生命周期
-                if (isFinishing() || isDestroyed()) return;
-
-                for (LanDevice d : found) {
-                    if (!syncedList.contains(d)) {
-                        syncedList.add(d);
-                    }
-                }
-                deviceAdapter.notifyDataSetChanged();
-                Toast.makeText(getApplicationContext(), "Found " + found.size() + " device(s)",
-                        Toast.LENGTH_SHORT).show();
-            });
-        }).start(); // 👈 补全了您之前缺失的右括号和分号
+        // 定时刷新列表（等待响应到达）
+        findViewById(R.id.main).postDelayed(() -> {
+            deviceList.clear();
+            deviceList.addAll(lanManager.getDevices());
+            deviceAdapter.notifyDataSetChanged();
+            Toast.makeText(LanForwardActivity.this,
+                    "Found " + deviceList.size() + " device(s)",
+                    Toast.LENGTH_SHORT).show();
+        }, 2000);
     }
 
 
@@ -302,7 +211,7 @@ public class LanForwardActivity extends AppCompatActivity {
 
         String[] parts = input.split(":");
         String ip = parts[0];
-        int port = parts.length > 1 ? Integer.parseInt(parts[1]) : SERVER_PORT;
+        int port = parts.length > 1 ? Integer.parseInt(parts[1]) : lanManager.getServerPort();
 
         selectedDevice = new LanDevice(ip, ip, port);
         if (!deviceList.contains(selectedDevice)) {
@@ -331,7 +240,7 @@ public class LanForwardActivity extends AppCompatActivity {
         editTextMessage.setText("");
 
         new Thread(() -> {
-            boolean ok = MessageClient.sendText(myDeviceName,
+            boolean ok = lanManager.sendTextTo(
                     selectedDevice.getIpAddress(), selectedDevice.getPort(), text);
             if (isFinishing() || isDestroyed()) return;
             runOnUiThread(() -> {
@@ -385,7 +294,7 @@ public class LanForwardActivity extends AppCompatActivity {
             File finalFile = tempFile;
             LanDevice dev = selectedDevice;
             new Thread(() -> {
-                boolean ok = MessageClient.sendFile(myDeviceName,
+                boolean ok = lanManager.sendFileTo(
                         dev.getIpAddress(), dev.getPort(), finalFile, type);
                 finalFile.delete();
                 if (isFinishing() || isDestroyed()) return;
@@ -447,13 +356,14 @@ public class LanForwardActivity extends AppCompatActivity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        // 关闭等待中的文件接收对话框，释放 CountDownLatch
         if (pendingFileDialog != null && pendingFileDialog.isShowing()) {
             pendingFileDialog.dismiss();
             pendingFileDialog = null;
         }
-        if (messageServer != null) messageServer.stop();
-        if (discoveryService != null) discoveryService.stop();
+        // 移除监听器，但不停止 LanManager（它是持久化单例）
+        if (lanManager != null && lanListener != null) {
+            lanManager.removeListener(lanListener);
+        }
     }
 
     @Override

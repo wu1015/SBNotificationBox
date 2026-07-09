@@ -9,6 +9,7 @@ import android.service.notification.NotificationListenerService;
 import android.service.notification.StatusBarNotification;
 import android.util.Log;
 
+import com.wu1015.sbnotificationbox.lanforward.network.LanManager;
 import com.wu1015.sbnotificationbox.mailsend.EmailSender;
 import com.wu1015.sbnotificationbox.mailsend.PackageFilterManager;
 import com.wu1015.sbnotificationbox.mailsend.SecureEmailPreferences;
@@ -79,7 +80,6 @@ public class MyNotificationListenerService extends NotificationListenerService {
         String receiverEmail = SecureEmailPreferences.getReceiverEmail(getBaseContext());
 
         if (senderEmail != null && receiverEmail != null) {
-            // 捕获局部变量供线程使用
             String finalAppName = appName;
             String finalTitle = title;
             String finalText = text;
@@ -94,6 +94,13 @@ public class MyNotificationListenerService extends NotificationListenerService {
                     Log.e("NotificationEmail", "Failed to send notification email", e);
                 }
             });
+        }
+
+        // 转发通知到局域网设备
+        LanManager lan = LanManager.getInstance(getBaseContext());
+        if (lan.isRunning()) {
+            String lanText = "[" + appName + "] " + notificationTitle + ": " + notificationText;
+            lan.broadcastText(lanText);
         }
     }
 

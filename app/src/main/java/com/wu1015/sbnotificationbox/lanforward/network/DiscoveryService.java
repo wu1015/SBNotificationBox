@@ -69,12 +69,21 @@ public class DiscoveryService {
         // 发送一次广播
         sendBroadcast();
 
-        // 持续监听回复
+        // 持续监听回复（设备始终保持可被发现状态）
         listenThread = new Thread(this::listenLoop, "DiscoveryListen");
         listenThread.start();
     }
 
-    /** 发送广播，主动搜索设备 */
+    /** 重新发送广播（用于手动刷新扫描，不影响持续监听） */
+    public void rescan() {
+        if (!running) {
+            start();
+        } else {
+            sendBroadcast();
+        }
+    }
+
+    /** 发送广播，主动搜索设备（已废弃，请使用 start() + rescan()） */
     public List<LanDevice> discoverOnce() {
         List<LanDevice> found = new ArrayList<>();
         DatagramSocket sock = null;
