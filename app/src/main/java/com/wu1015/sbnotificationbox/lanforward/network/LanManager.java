@@ -1,8 +1,14 @@
 package com.wu1015.sbnotificationbox.lanforward.network;
 
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
 import android.content.Context;
+import android.os.Build;
 import android.util.Log;
 
+import androidx.core.app.NotificationCompat;
+
+import com.wu1015.sbnotificationbox.R;
 import com.wu1015.sbnotificationbox.lanforward.model.LanDevice;
 import com.wu1015.sbnotificationbox.lanforward.model.LanMessage;
 import com.wu1015.sbnotificationbox.lanforward.storage.LanPreferences;
@@ -10,8 +16,14 @@ import com.wu1015.sbnotificationbox.notification.MyNotification;
 import com.wu1015.sbnotificationbox.notification.NotificationWidgetProvider;
 
 import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.OutputStreamWriter;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
+import java.util.Locale;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -79,7 +91,11 @@ public class LanManager {
             @Override
             public void onTextMessage(LanMessage message) {
                 Log.d(TAG, "Text from " + message.getDeviceName() + ": " + message.getContent());
-                // 通知所有监听器
+                // 发送系统通知
+                sendLanNotification(message);
+                // 持久化写入日志文件
+                appendToLanLog(message);
+                // 通知所有监听器（UI）
                 for (LanStatusListener l : listeners) {
                     l.onTextReceived(message);
                 }
@@ -135,6 +151,71 @@ public class LanManager {
         serverRunning = false;
         notifyStatusChanged();
         Log.i(TAG, "LanManager stopped");
+    }
+
+    // === 通知 + 持久化 ===
+
+    private static final String LAN_CHANNEL_ID = "lan_forward_channel";
+    private static final String LAN_CHANNEL_NAME = "LAN Messages";
+    private static int lanNotificationId = 2000;
+
+    private void ensureNotificationChannel() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            NotificationManager nm = (NotificationManager)
+                    appContext.getSystemService(Context.NOTIFICATION_SERVICE);
+            if (nm != null && nm.getNotificationChannel(LAN_CHANNEL_ID) == null) {
+                NotificationChannel channel = new NotificationChannel(
+                        LAN_CHANNEL_ID, LAN_CHANNEL_NAME,
+                        NotificationManager.IMPORTANCE_DEFAULT);
+                nm.createNotificationChannel(channel);
+            }
+        }
+    }
+
+    /** 发系统通知 */
+    private void sendLanNotification(LanMessage message) {
+        try {
+            ensureNotificationChannel();
+            NotificationCompat.Builder builder = new NotificationCompat.Builder(
+                    appContext, LAN_CHANNEL_ID)
+                    .setSmallIcon(R.drawable.ic_launcher_foreground)
+                    .setContentTitle("LAN: " + message.getDeviceName())
+                    .setContentText(message.getContent())
+                    .setStyle(new NotificationCompat.BigTextStyle()
+                            .bigText(message.getContent()))
+                    .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+                    .setAutoCancel(true);
+
+            NotificationManager nm = (NotificationManager)
+                    appContext.getSystemService(Context.NOTIFICATION_SERVICE);
+            if (nm != null) {
+                nm.notify(lanNotificationId++, builder.build());
+            }
+        } catch (Exception e) {
+            Log.w(TAG, "Failed to send LAN notification", e);
+        }
+    }
+
+    /** 持久化写入日志文件 */
+    private void appendToLanLog(LanMessage message) {
+        try {
+            SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd", Locale.US);
+            String date = sdf.format(new Date());
+            String fileName = date + "_lan_log.md";
+
+            FileOutputStream fos = appContext.openFileOutput(fileName, Context.MODE_APPEND);
+            OutputStreamWriter writer = new OutputStreamWriter(fos, "UTF-8");
+
+            String time = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US)
+                    .format(new Date(message.getTimestamp()));
+            String entry = time + " LAN:" + message.getDeviceName() + "\n"
+                    + message.getContent() + "\n\n";
+            writer.write(entry);
+            writer.close();
+            fos.close();
+        } catch (IOException e) {
+            Log.w(TAG, "Failed to write LAN log", e);
+        }
     }
 
     // === 状态查询 ===

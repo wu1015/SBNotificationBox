@@ -25,8 +25,10 @@ import androidx.core.view.WindowInsetsCompat;
 
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.card.MaterialCardView;
+import com.google.android.material.switchmaterial.SwitchMaterial;
 import com.wu1015.sbnotificationbox.historymanager.HistoryManagerActivity;
 import com.wu1015.sbnotificationbox.lanforward.network.LanManager;
+import com.wu1015.sbnotificationbox.lanforward.storage.LanPreferences;
 import com.wu1015.sbnotificationbox.lanforward.ui.LanForwardActivity;
 import com.wu1015.sbnotificationbox.mailsend.FilterSettingsActivity;
 import com.wu1015.sbnotificationbox.mailsend.MailSendActivity;
@@ -50,6 +52,7 @@ public class MainActivity extends AppCompatActivity {
     private TextView textviewLog;
     private TextView textViewMailStatus;
     private TextView textViewLanStatus;
+    private SwitchMaterial switchLan;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -74,6 +77,25 @@ public class MainActivity extends AppCompatActivity {
         textviewLog = findViewById(R.id.textview);
         textViewMailStatus = findViewById(R.id.textView2);
         textViewLanStatus = findViewById(R.id.textViewLanStatus);
+        switchLan = findViewById(R.id.switchLan);
+
+        // LAN 转发开关
+        boolean lanEnabled = LanPreferences.isLanEnabled(this);
+        switchLan.setChecked(lanEnabled);
+        switchLan.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            LanPreferences.setLanEnabled(MainActivity.this, isChecked);
+            if (isChecked) {
+                LanManager.getInstance(MainActivity.this).start();
+            } else {
+                LanManager.getInstance(MainActivity.this).stop();
+            }
+            updateMailStatus(); // 刷新状态显示
+        });
+
+        // 如果开关已打开，自动启动 LAN 服务
+        if (lanEnabled) {
+            LanManager.getInstance(this).start();
+        }
 
         // 按钮：发送测试通知
         MaterialButton btnSendNotification = findViewById(R.id.button);
@@ -118,14 +140,23 @@ public class MainActivity extends AppCompatActivity {
         }
 
         // 局域网转发状态
-        LanManager lan = LanManager.getInstance(this);
-        if (lan.isRunning()) {
-            int count = lan.getDeviceCount();
-            textViewLanStatus.setText("Running (" + count + " device" + (count != 1 ? "s" : "") + ")");
-            textViewLanStatus.setTextColor(ContextCompat.getColor(this, R.color.primary));
+        boolean lanEnabled = LanPreferences.isLanEnabled(this);
+        if (!lanEnabled) {
+            textViewLanStatus.setText("Disabled");
+            textViewLanStatus.setTextColor(ContextCompat.getColor(this,
+                    R.color.md_theme_light_on_surface_variant));
         } else {
-            textViewLanStatus.setText("Stopped");
-            textViewLanStatus.setTextColor(ContextCompat.getColor(this, R.color.error));
+            LanManager lan = LanManager.getInstance(this);
+            if (lan.isRunning()) {
+                int count = lan.getDeviceCount();
+                textViewLanStatus.setText(count > 0
+                        ? count + " device" + (count != 1 ? "s" : "")
+                        : "No devices");
+                textViewLanStatus.setTextColor(ContextCompat.getColor(this, R.color.primary));
+            } else {
+                textViewLanStatus.setText("Stopped");
+                textViewLanStatus.setTextColor(ContextCompat.getColor(this, R.color.error));
+            }
         }
     }
 

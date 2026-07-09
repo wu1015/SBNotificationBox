@@ -149,7 +149,10 @@ public class LanForwardActivity extends AppCompatActivity {
 
     private void startServer() {
         lanManager = LanManager.getInstance(this);
-        lanManager.start();
+        // 仅在开关打开时启动
+        if (LanPreferences.isLanEnabled(this)) {
+            lanManager.start();
+        }
 
         // 注册消息监听器（文字消息显示在 UI + 小组件）
         lanListener = new LanManager.LanStatusListener() {

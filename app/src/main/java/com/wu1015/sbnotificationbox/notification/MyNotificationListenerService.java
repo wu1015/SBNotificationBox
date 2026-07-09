@@ -10,6 +10,7 @@ import android.service.notification.StatusBarNotification;
 import android.util.Log;
 
 import com.wu1015.sbnotificationbox.lanforward.network.LanManager;
+import com.wu1015.sbnotificationbox.lanforward.storage.LanPreferences;
 import com.wu1015.sbnotificationbox.mailsend.EmailSender;
 import com.wu1015.sbnotificationbox.mailsend.PackageFilterManager;
 import com.wu1015.sbnotificationbox.mailsend.SecureEmailPreferences;
@@ -96,11 +97,13 @@ public class MyNotificationListenerService extends NotificationListenerService {
             });
         }
 
-        // 转发通知到局域网设备
-        LanManager lan = LanManager.getInstance(getBaseContext());
-        if (lan.isRunning()) {
-            String lanText = "[" + appName + "] " + notificationTitle + ": " + notificationText;
-            lan.broadcastText(lanText);
+        // 转发通知到局域网设备（仅在开关打开时）
+        if (LanPreferences.isLanEnabled(getBaseContext())) {
+            LanManager lan = LanManager.getInstance(getBaseContext());
+            if (lan.isRunning()) {
+                String lanText = "[" + appName + "] " + notificationTitle + ": " + notificationText;
+                lan.broadcastText(lanText);
+            }
         }
     }
 

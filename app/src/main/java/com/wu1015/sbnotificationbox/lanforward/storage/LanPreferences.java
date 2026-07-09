@@ -15,6 +15,7 @@ public class LanPreferences {
     private static final String PREF_NAME = "lan_forward_prefs";
     private static final String KEY_DEVICE_NAME = "device_name";
     private static final String KEY_STORAGE_DIR = "storage_dir";
+    private static final String KEY_LAN_ENABLED = "lan_enabled";
 
     private static SharedPreferences getPrefs(Context context) {
         return context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE);
@@ -51,5 +52,15 @@ public class LanPreferences {
 
     public static void setStorageDir(Context context, String dir) {
         getPrefs(context).edit().putString(KEY_STORAGE_DIR, dir).apply();
+    }
+
+    // === 局域网转发开关 ===
+
+    public static boolean isLanEnabled(Context context) {
+        return getPrefs(context).getBoolean(KEY_LAN_ENABLED, true); // 默认开启
+    }
+
+    public static void setLanEnabled(Context context, boolean enabled) {
+        getPrefs(context).edit().putBoolean(KEY_LAN_ENABLED, enabled).apply();
     }
 }

@@ -31,7 +31,7 @@ public class MessageServer {
     private final MessageListener listener;
 
     private ServerSocket serverSocket;
-    private final ExecutorService threadPool = Executors.newCachedThreadPool();
+    private ExecutorService threadPool;
     private final AtomicBoolean running = new AtomicBoolean(false);
 
     public interface MessageListener {
@@ -52,24 +52,37 @@ public class MessageServer {
     public void start() {
         if (running.getAndSet(true)) return;
 
+        // 每次启动重建线程池（上次 stop() 已 shutdown）
+        threadPool = Executors.newCachedThreadPool(r -> {
+            Thread t = new Thread(r, "MessageServer");
+            t.setDaemon(true);
+            return t;
+        });
+
         ensureSaveDir();
         threadPool.execute(() -> {
-            try {
-                serverSocket = new ServerSocket(port);
-                Log.i(TAG, "Server started on port " + port);
+            while (running.get()) {
+                try {
+                    serverSocket = new ServerSocket(port);
+                    Log.i(TAG, "Server listening on port " + port);
 
-                while (running.get()) {
-                    try {
-                        Socket client = serverSocket.accept();
-                        threadPool.execute(() -> handleClient(client));
-                    } catch (IOException e) {
-                        if (running.get()) {
-                            Log.e(TAG, "Accept error", e);
+                    while (running.get()) {
+                        try {
+                            Socket client = serverSocket.accept();
+                            threadPool.execute(() -> handleClient(client));
+                        } catch (IOException e) {
+                            if (running.get()) {
+                                Log.e(TAG, "Accept error, restarting listener", e);
+                                break; // 跳出内层循环，重建 ServerSocket
+                            }
                         }
                     }
+                } catch (IOException e) {
+                    Log.e(TAG, "Server bind error", e);
+                    if (running.get()) {
+                        try { Thread.sleep(2000); } catch (InterruptedException ignored) {}
+                    }
                 }
-            } catch (IOException e) {
-                Log.e(TAG, "Server start error", e);
             }
         });
     }
