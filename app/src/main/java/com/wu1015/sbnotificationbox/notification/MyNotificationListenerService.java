@@ -26,7 +26,8 @@ import java.util.concurrent.Executors;
 
 public class MyNotificationListenerService extends NotificationListenerService {
 
-    private final ExecutorService executor = Executors.newCachedThreadPool(r -> {
+    // 使用固定大小线程池，防止大量通知并发时创建过多线程导致 OOM
+    private final ExecutorService executor = Executors.newFixedThreadPool(4, r -> {
         Thread t = new Thread(r, "NotificationSender");
         t.setDaemon(true); // daemon 线程不阻止进程退出
         return t;
@@ -70,6 +71,12 @@ public class MyNotificationListenerService extends NotificationListenerService {
         NotificationWidgetProvider.addItemToWidget(new MyNotification(title, text));
         NotificationWidgetProvider.updateWidget(getApplicationContext());
 
+        // 排除本应用自身的通知（LAN 转发/测试通知等），仅记录日志不做二次转发
+        if (getPackageName().equals(packageName)) {
+            Log.d("NotificationFilter", "Skipping self notification: " + packageName);
+            return;
+        }
+
         // 检查包名过滤规则
         if (!PackageFilterManager.shouldForward(getBaseContext(), packageName)) {
             Log.d("NotificationFilter", "Filtered out: " + packageName);
@@ -97,8 +104,9 @@ public class MyNotificationListenerService extends NotificationListenerService {
             });
         }
 
-        // 转发通知到局域网设备（仅在开关打开时）
-        if (LanPreferences.isLanEnabled(getBaseContext())) {
+        // 转发通知到局域网设备（仅在开关打开且模式允许发送时）
+        if (LanPreferences.isLanEnabled(getBaseContext())
+                && LanPreferences.getLanMode(getBaseContext()).canSend()) {
             LanManager lan = LanManager.getInstance(getBaseContext());
             if (lan.isRunning()) {
                 String lanText = "[" + appName + "] " + notificationTitle + ": " + notificationText;

@@ -12,9 +12,11 @@ import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 
 import com.google.android.material.button.MaterialButton;
+import com.google.android.material.button.MaterialButtonToggleGroup;
 import com.google.android.material.textfield.TextInputEditText;
 import com.wu1015.sbnotificationbox.R;
 import com.wu1015.sbnotificationbox.lanforward.storage.LanPreferences;
+import com.wu1015.sbnotificationbox.lanforward.storage.LanPreferences.LanMode;
 
 import java.io.File;
 
@@ -23,6 +25,10 @@ public class LanSettingsActivity extends AppCompatActivity {
     private TextInputEditText editTextDeviceName;
     private TextInputEditText editTextStorageDir;
     private TextInputEditText editTextSecret;
+    private MaterialButtonToggleGroup toggleLanMode;
+    private MaterialButton btnModeSendReceive;
+    private MaterialButton btnModeSendOnly;
+    private MaterialButton btnModeReceiveOnly;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -47,6 +53,10 @@ public class LanSettingsActivity extends AppCompatActivity {
         editTextDeviceName = findViewById(R.id.editTextDeviceName);
         editTextStorageDir = findViewById(R.id.editTextStorageDir);
         editTextSecret = findViewById(R.id.editTextSecret);
+        toggleLanMode = findViewById(R.id.toggleLanMode);
+        btnModeSendReceive = findViewById(R.id.btnModeSendReceive);
+        btnModeSendOnly = findViewById(R.id.btnModeSendOnly);
+        btnModeReceiveOnly = findViewById(R.id.btnModeReceiveOnly);
         MaterialButton btnBrowse = findViewById(R.id.btnBrowseFolder);
         MaterialButton btnSave = findViewById(R.id.btnSave);
 
@@ -58,6 +68,21 @@ public class LanSettingsActivity extends AppCompatActivity {
         editTextDeviceName.setText(LanPreferences.getDeviceName(this));
         editTextStorageDir.setText(LanPreferences.getStorageDir(this));
         editTextSecret.setText(LanPreferences.getConnectionSecret(this));
+
+        // 加载收发模式
+        LanMode mode = LanPreferences.getLanMode(this);
+        switch (mode) {
+            case SEND_ONLY:
+                toggleLanMode.check(btnModeSendOnly.getId());
+                break;
+            case RECEIVE_ONLY:
+                toggleLanMode.check(btnModeReceiveOnly.getId());
+                break;
+            case BOTH:
+            default:
+                toggleLanMode.check(btnModeSendReceive.getId());
+                break;
+        }
     }
 
     private void saveSettings() {
@@ -78,6 +103,18 @@ public class LanSettingsActivity extends AppCompatActivity {
             if (!f.exists()) f.mkdirs();
             LanPreferences.setStorageDir(this, dir);
         }
+
+        // 保存收发模式
+        int checkedId = toggleLanMode.getCheckedButtonId();
+        LanMode mode;
+        if (checkedId == btnModeSendOnly.getId()) {
+            mode = LanMode.SEND_ONLY;
+        } else if (checkedId == btnModeReceiveOnly.getId()) {
+            mode = LanMode.RECEIVE_ONLY;
+        } else {
+            mode = LanMode.BOTH;
+        }
+        LanPreferences.setLanMode(this, mode);
 
         Toast.makeText(this, "Settings saved", Toast.LENGTH_SHORT).show();
         finish();

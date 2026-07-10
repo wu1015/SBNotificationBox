@@ -66,12 +66,14 @@ public class MessageServer {
 
         ensureSaveDir();
         threadPool.execute(() -> {
+            int backoffMs = 0;
             while (running.get()) {
                 try {
                     ServerSocket ss = new ServerSocket();
                     ss.setReuseAddress(true);
                     ss.bind(new InetSocketAddress((InetAddress) null, port));
                     serverSocket = ss;
+                    backoffMs = 0; // 连接成功后重置退避
                     Log.i(TAG, "Server listening on port " + port);
 
                     while (running.get()) {
@@ -88,7 +90,14 @@ public class MessageServer {
                 } catch (IOException e) {
                     Log.e(TAG, "Server bind error", e);
                     if (running.get()) {
-                        try { Thread.sleep(2000); } catch (InterruptedException ignored) {}
+                        // 指数退避重连（最长 30 秒）
+                        backoffMs = Math.min(backoffMs == 0 ? 1000 : backoffMs * 2, 30000);
+                        Log.i(TAG, "Retrying bind in " + backoffMs + "ms...");
+                        try {
+                            Thread.sleep(backoffMs);
+                        } catch (InterruptedException ignored) {
+                            break;
+                        }
                     }
                 }
             }
@@ -99,17 +108,22 @@ public class MessageServer {
         running.set(false);
         // 先关闭 accept socket，让 accept() 抛出异常退出
         try {
-            if (serverSocket != null) serverSocket.close();
+            if (serverSocket != null) {
+                serverSocket.close();
+                serverSocket = null;
+            }
         } catch (IOException ignored) {}
         // 使用 shutdown() 而非 shutdownNow()，让正在传输的客户端正常完成
-        threadPool.shutdown();
-        try {
-            if (!threadPool.awaitTermination(5, java.util.concurrent.TimeUnit.SECONDS)) {
-                threadPool.shutdownNow(); // 超时则强制中断
+        if (threadPool != null) {
+            threadPool.shutdown();
+            try {
+                if (!threadPool.awaitTermination(5, java.util.concurrent.TimeUnit.SECONDS)) {
+                    threadPool.shutdownNow(); // 超时则强制中断
+                }
+            } catch (InterruptedException e) {
+                threadPool.shutdownNow();
+                Thread.currentThread().interrupt();
             }
-        } catch (InterruptedException e) {
-            threadPool.shutdownNow();
-            Thread.currentThread().interrupt();
         }
         Log.i(TAG, "Server stopped");
     }

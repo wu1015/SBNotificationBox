@@ -20,11 +20,48 @@ import java.util.List;
  */
 public class LanPreferences {
 
+    /**
+     * LAN 收发方向模式。
+     */
+    public enum LanMode {
+        BOTH("Send & Receive"),
+        SEND_ONLY("Send Only"),
+        RECEIVE_ONLY("Receive Only");
+
+        private final String displayName;
+
+        LanMode(String displayName) {
+            this.displayName = displayName;
+        }
+
+        public String getDisplayName() {
+            return displayName;
+        }
+
+        public boolean canSend() {
+            return this == BOTH || this == SEND_ONLY;
+        }
+
+        public boolean canReceive() {
+            return this == BOTH || this == RECEIVE_ONLY;
+        }
+
+        public static LanMode fromString(String s) {
+            if (s == null) return BOTH;
+            try {
+                return valueOf(s);
+            } catch (IllegalArgumentException e) {
+                return BOTH;
+            }
+        }
+    }
+
     private static final String TAG = "LanPreferences";
     private static final String PREF_NAME = "lan_forward_prefs";
     private static final String KEY_DEVICE_NAME = "device_name";
     private static final String KEY_STORAGE_DIR = "storage_dir";
     private static final String KEY_LAN_ENABLED = "lan_enabled";
+    private static final String KEY_LAN_MODE = "lan_mode";
     private static final String KEY_CONNECTION_SECRET = "connection_secret";
     private static final String KEY_SAVED_DEVICES = "saved_devices";
 
@@ -73,6 +110,19 @@ public class LanPreferences {
 
     public static void setLanEnabled(Context context, boolean enabled) {
         getPrefs(context).edit().putBoolean(KEY_LAN_ENABLED, enabled).apply();
+    }
+
+    // === 局域网收发方向 ===
+
+    /** 获取 LAN 收发模式（默认双向） */
+    public static LanMode getLanMode(Context context) {
+        String s = getPrefs(context).getString(KEY_LAN_MODE, LanMode.BOTH.name());
+        return LanMode.fromString(s);
+    }
+
+    /** 设置 LAN 收发模式 */
+    public static void setLanMode(Context context, LanMode mode) {
+        getPrefs(context).edit().putString(KEY_LAN_MODE, mode.name()).apply();
     }
 
     // === 连接密钥 ===

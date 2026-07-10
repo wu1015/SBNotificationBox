@@ -206,6 +206,7 @@ public class LanForwardActivity extends AppCompatActivity {
             public void onStatusChanged(boolean running, int deviceCount) {
                 // 设备状态变化时刷新列表（心跳/超时触发）
                 runOnUiThread(() -> {
+                    if (isFinishing() || isDestroyed()) return;
                     deviceList.clear();
                     deviceList.addAll(lanManager.getDevices());
                     deviceAdapter.notifyDataSetChanged();
@@ -215,6 +216,7 @@ public class LanForwardActivity extends AppCompatActivity {
             @Override
             public void onTextReceived(LanMessage message) {
                 runOnUiThread(() -> {
+                    if (isFinishing() || isDestroyed()) return;
                     messageList.add(message);
                     messageAdapter.notifyDataSetChanged();
                     if (message.getType() == LanMessage.Type.TEXT) {

@@ -43,6 +43,8 @@ public class DiscoveryService {
     private volatile boolean running = false;
     private Thread listenThread;
     private Thread heartbeatThread;
+    private int consecutiveListenErrors = 0;
+    private static final int MAX_LISTEN_ERRORS_BEFORE_RESTART = 10;
 
     // 本机 WiFi IP（null = 未找到）
     private String localWifiIp;
@@ -85,16 +87,21 @@ public class DiscoveryService {
         heartbeatThread.setDaemon(true);
         heartbeatThread.start();
 
-        // 立即发送一次初始广播
-        sendBroadcast();
+        // 初始广播放在后台线程执行（避免 NetworkOnMainThreadException）
+        new Thread(this::sendBroadcast, "DiscoveryInitBroadcast").start();
 
         Log.i(TAG, "Discovery listener started (WiFi IP: " + localWifiIp + ")");
     }
 
-    /** 重新发送广播 */
+    /** 重新发送广播（线程安全，可在主线程调用） */
     public void rescan() {
-        if (!running) start();
-        sendBroadcast();
+        if (!running) {
+            // start() 会启动后台线程发广播
+            start();
+        } else {
+            // 在后台线程发广播
+            new Thread(this::sendBroadcast, "DiscoveryRescan").start();
+        }
     }
 
     /** 单次广播并等待回复（阻塞，最多 4 秒）。
@@ -196,56 +203,81 @@ public class DiscoveryService {
 
     /** 监听循环：接收发现包并回复发送方，实现双向发现 */
     private void listenLoop() {
-        try {
-            listenSocket = createBoundSocket(DISCOVERY_PORT);
-            listenSocket.setSoTimeout(LISTEN_TIMEOUT_MS);
-            Log.i(TAG, "Listen socket bound to port " + DISCOVERY_PORT);
+        int backoffMs = 0;
+        while (running) {
+            try {
+                listenSocket = createBoundSocket(DISCOVERY_PORT);
+                listenSocket.setSoTimeout(LISTEN_TIMEOUT_MS);
+                Log.i(TAG, "Listen socket bound to port " + DISCOVERY_PORT);
 
-            byte[] buf = new byte[1024];
-            while (running) {
-                try {
-                    DatagramPacket packet = new DatagramPacket(buf, buf.length);
-                    listenSocket.receive(packet);
-                    LanDevice device = parseResponse(packet);
-                    if (device != null) {
-                        if (listener != null) {
-                            listener.onDeviceFound(device);
-                        }
+                consecutiveListenErrors = 0;
+                backoffMs = 0; // 连接成功后重置退避
 
-                        // 回复发送方，告知本设备信息（双向发现的关键）
-                        // 注意：必须发到 DISCOVERY_PORT，不能发到 packet.getPort()
-                        // 因为发送方用的是临时端口（已关闭），发到 9876 才能被对方的 listenSocket 收到
-                        try {
-                            JSONObject resp = new JSONObject();
-                            resp.put("type", "discovery");
-                            resp.put("deviceName", deviceName);
-                            resp.put("port", serverPort);
-                            String secret = LanPreferences.getConnectionSecret(context);
-                            if (!secret.isEmpty()) {
-                                resp.put("secret", secret);
+                byte[] buf = new byte[1024];
+                while (running) {
+                    try {
+                        DatagramPacket packet = new DatagramPacket(buf, buf.length);
+                        listenSocket.receive(packet);
+                        LanDevice device = parseResponse(packet);
+                        if (device != null) {
+                            if (listener != null) {
+                                listener.onDeviceFound(device);
                             }
-                            byte[] respData = resp.toString().getBytes("UTF-8");
-                            DatagramPacket response = new DatagramPacket(
-                                    respData, respData.length,
-                                    packet.getAddress(),    // 发送方 IP
-                                    DISCOVERY_PORT);        // 发到发现端口，不是临时端口
-                            listenSocket.send(response);
-                        } catch (Exception e) {
-                            Log.w(TAG, "Failed to send discovery response", e);
+
+                            // 回复发送方，告知本设备信息（双向发现的关键）
+                            try {
+                                JSONObject resp = new JSONObject();
+                                resp.put("type", "discovery");
+                                resp.put("deviceName", deviceName);
+                                resp.put("port", serverPort);
+                                String secret = LanPreferences.getConnectionSecret(context);
+                                if (!secret.isEmpty()) {
+                                    resp.put("secret", secret);
+                                }
+                                byte[] respData = resp.toString().getBytes("UTF-8");
+                                DatagramPacket response = new DatagramPacket(
+                                        respData, respData.length,
+                                        packet.getAddress(),    // 发送方 IP
+                                        DISCOVERY_PORT);        // 发到发现端口
+                                listenSocket.send(response);
+                            } catch (Exception e) {
+                                Log.w(TAG, "Failed to send discovery response", e);
+                            }
+                        }
+                    } catch (SocketTimeoutException e) {
+                        // 超时，继续循环检查 running
+                    } catch (IOException e) {
+                        if (running) {
+                            consecutiveListenErrors++;
+                            Log.w(TAG, "Receive error in loop ("
+                                    + consecutiveListenErrors + "/"
+                                    + MAX_LISTEN_ERRORS_BEFORE_RESTART + ")", e);
+                            // 连续错误过多，跳出重建 listen socket
+                            if (consecutiveListenErrors >= MAX_LISTEN_ERRORS_BEFORE_RESTART) {
+                                break;
+                            }
                         }
                     }
-                } catch (SocketTimeoutException e) {
-                    // 超时，继续循环检查 running
-                } catch (IOException e) {
-                    if (running) Log.w(TAG, "Receive error in loop", e);
+                }
+            } catch (Exception e) {
+                Log.e(TAG, "Listen loop error", e);
+                if (listener != null) listener.onDiscoveryError(e.getMessage());
+            } finally {
+                closeQuietly(listenSocket);
+                listenSocket = null;
+                Log.i(TAG, "Listen loop exited");
+            }
+
+            // 指数退避重连
+            if (running) {
+                backoffMs = Math.min(backoffMs == 0 ? 1000 : backoffMs * 2, 30000);
+                Log.i(TAG, "Reconnecting listen socket in " + backoffMs + "ms...");
+                try {
+                    Thread.sleep(backoffMs);
+                } catch (InterruptedException e) {
+                    break;
                 }
             }
-        } catch (Exception e) {
-            Log.e(TAG, "Listen loop error", e);
-            if (listener != null) listener.onDiscoveryError(e.getMessage());
-        } finally {
-            closeQuietly(listenSocket);
-            Log.i(TAG, "Listen loop exited");
         }
     }
 

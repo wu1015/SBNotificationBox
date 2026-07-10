@@ -146,15 +146,22 @@ public class MainActivity extends AppCompatActivity {
             textViewLanStatus.setTextColor(ContextCompat.getColor(this,
                     R.color.md_theme_light_on_surface_variant));
         } else {
+            LanPreferences.LanMode mode = LanPreferences.getLanMode(this);
+            String modeLabel;
+            switch (mode) {
+                case SEND_ONLY:   modeLabel = "Send Only"; break;
+                case RECEIVE_ONLY: modeLabel = "Receive Only"; break;
+                default:           modeLabel = "Send & Receive"; break;
+            }
             LanManager lan = LanManager.getInstance(this);
             if (lan.isRunning()) {
                 int count = lan.getDeviceCount();
-                textViewLanStatus.setText(count > 0
+                textViewLanStatus.setText(modeLabel + " • " + (count > 0
                         ? count + " device" + (count != 1 ? "s" : "")
-                        : "No devices");
+                        : "No devices"));
                 textViewLanStatus.setTextColor(ContextCompat.getColor(this, R.color.primary));
             } else {
-                textViewLanStatus.setText("Stopped");
+                textViewLanStatus.setText(modeLabel + " • Stopped");
                 textViewLanStatus.setTextColor(ContextCompat.getColor(this, R.color.error));
             }
         }
