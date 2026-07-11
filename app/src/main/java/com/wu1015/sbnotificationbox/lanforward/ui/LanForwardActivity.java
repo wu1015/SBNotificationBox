@@ -56,6 +56,7 @@ public class LanForwardActivity extends AppCompatActivity {
     private LanDevice selectedDevice;
 
     private String myDeviceName;
+    private SwitchMaterial switchLanForward;
 
     // UI 定期刷新
     private Handler refreshHandler;
@@ -100,7 +101,7 @@ public class LanForwardActivity extends AppCompatActivity {
         MaterialButton btnSend = findViewById(R.id.btnSend);
         MaterialButton btnAttach = findViewById(R.id.btnAttach);
         MaterialButton btnSettings = findViewById(R.id.btnSettings);
-        SwitchMaterial switchLanForward = findViewById(R.id.switchLanForward);
+        switchLanForward = findViewById(R.id.switchLanForward);
 
         btnScan.setOnClickListener(v -> doScan());
         btnConnect.setOnClickListener(v -> connectToIp());
@@ -159,10 +160,10 @@ public class LanForwardActivity extends AppCompatActivity {
                 statusView.setText(status);
                 statusView.setTextColor(d.isOnline() ? 0xFF4CAF50 : 0xFFBDBDBD);
 
-                // Connect：选中设备用于发消息（即使离线也允许尝试）
+                // Connect：选中设备用于发消息。在线表示已连通，离线可尝试探测
                 btnConnect.setOnClickListener(v -> connectToDevice(d));
-                btnConnect.setEnabled(true); // 总是可点击，让用户尝试连接
-                btnConnect.setText(d.isOnline() ? "Connect" : "Try");
+                btnConnect.setEnabled(true);
+                btnConnect.setText(d.isOnline() ? "Connected" : "Connect");
 
                 // Disconnect：从列表移除设备
                 btnDisconnect.setOnClickListener(v -> disconnectDevice(d));
@@ -219,7 +220,11 @@ public class LanForwardActivity extends AppCompatActivity {
                     if (isFinishing() || isDestroyed()) return;
                     messageList.add(message);
                     messageAdapter.notifyDataSetChanged();
-                    if (message.getType() == LanMessage.Type.TEXT) {
+                    // 仅将接收到的消息显示在小组件上。
+                    // 转发的系统通知已由 MyNotificationListenerService 记录并显示，
+                    // 此处不再重复添加以避免重复显示。
+                    if (message.getType() == LanMessage.Type.TEXT
+                            && message.getDirection() == LanMessage.Direction.RECEIVED) {
                         NotificationWidgetProvider.addItemToWidget(
                                 new MyNotification("LAN:" + message.getDeviceName(),
                                         message.getContent()));
@@ -289,19 +294,68 @@ public class LanForwardActivity extends AppCompatActivity {
 
         // 使用有意义的设备名称（而非 IP 地址）
         LanDevice device = new LanDevice("Device at " + ip, ip, port);
-        lanManager.addManualDevice(device); // 添加到 LanManager + 持久化
-        refreshDeviceList(); // 刷新本地列表
+        lanManager.addManualDevice(device); // 异步 TCP 探测，初始为离线
+        refreshDeviceList();
         selectedDevice = device;
-        Toast.makeText(this, "Added " + ip + ":" + port, Toast.LENGTH_SHORT).show();
+        editTextIp.setText(""); // 清空输入框
+        Toast.makeText(this, "Probing " + ip + ":" + port + "...",
+                Toast.LENGTH_SHORT).show();
+
+        // 延时刷新列表，等待 TCP 探测完成
+        findViewById(R.id.main).postDelayed(() -> {
+            refreshDeviceList();
+            // 根据探测结果显示最终状态
+            for (LanDevice d : deviceList) {
+                if (d.getIpAddress().equals(ip) && d.getPort() == port) {
+                    if (d.isOnline()) {
+                        Toast.makeText(LanForwardActivity.this,
+                                "Connected to " + d.getDeviceName(),
+                                Toast.LENGTH_SHORT).show();
+                    } else {
+                        Toast.makeText(LanForwardActivity.this,
+                                "Cannot reach " + ip + ":" + port,
+                                Toast.LENGTH_SHORT).show();
+                    }
+                    break;
+                }
+            }
+        }, 3000);
     }
 
     private void connectToDevice(LanDevice device) {
         selectedDevice = device;
-        // 如果设备是通过网络发现的，也持久化保存
+        // 持久化保存设备并触发 TCP 探测（addManualDevice 内异步执行）
         lanManager.addManualDevice(device);
         refreshDeviceList();
-        Toast.makeText(this, "Connected to " + device.getDeviceName(),
-                Toast.LENGTH_SHORT).show();
+
+        // 如果设备已经在线（UDP 心跳已验证），直接提示已连接
+        if (device.isOnline()) {
+            Toast.makeText(this, "Connected to " + device.getDeviceName(),
+                    Toast.LENGTH_SHORT).show();
+        } else {
+            // 设备离线，addManualDevice 会在后台探测，延时刷新确认结果
+            Toast.makeText(this, "Probing " + device.getDeviceName() + "...",
+                    Toast.LENGTH_SHORT).show();
+            findViewById(R.id.main).postDelayed(() -> {
+                refreshDeviceList();
+                // 探测后再次检查状态并反馈
+                for (LanDevice d : deviceList) {
+                    if (d.getIpAddress().equals(device.getIpAddress())
+                            && d.getPort() == device.getPort()) {
+                        if (d.isOnline()) {
+                            Toast.makeText(LanForwardActivity.this,
+                                    "Connected to " + d.getDeviceName(),
+                                    Toast.LENGTH_SHORT).show();
+                        } else {
+                            Toast.makeText(LanForwardActivity.this,
+                                    "Cannot reach " + d.getDeviceName(),
+                                    Toast.LENGTH_SHORT).show();
+                        }
+                        break;
+                    }
+                }
+            }, 3000);
+        }
     }
 
     private void disconnectDevice(LanDevice device) {
@@ -420,6 +474,18 @@ public class LanForwardActivity extends AppCompatActivity {
             }
         } catch (Exception ignored) {}
         return name;
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        // 同步 LAN 开关状态（可能从主页面被修改）
+        if (switchLanForward != null) {
+            boolean lanEnabled = LanPreferences.isLanEnabled(this);
+            if (switchLanForward.isChecked() != lanEnabled) {
+                switchLanForward.setChecked(lanEnabled);
+            }
+        }
     }
 
     @Override

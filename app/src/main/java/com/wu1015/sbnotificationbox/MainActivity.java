@@ -33,6 +33,8 @@ import com.wu1015.sbnotificationbox.lanforward.ui.LanForwardActivity;
 import com.wu1015.sbnotificationbox.mailsend.FilterSettingsActivity;
 import com.wu1015.sbnotificationbox.mailsend.MailSendActivity;
 import com.wu1015.sbnotificationbox.mailsend.MailSessionManager;
+import com.wu1015.sbnotificationbox.mailsend.PersistentTransport;
+import com.wu1015.sbnotificationbox.mailsend.SecureEmailPreferences;
 import com.wu1015.sbnotificationbox.notification.NotificationWidgetProvider;
 
 import java.io.FileInputStream;
@@ -53,6 +55,7 @@ public class MainActivity extends AppCompatActivity {
     private TextView textViewMailStatus;
     private TextView textViewLanStatus;
     private SwitchMaterial switchLan;
+    private SwitchMaterial switchMail;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -97,6 +100,19 @@ public class MainActivity extends AppCompatActivity {
             LanManager.getInstance(this).start();
         }
 
+        // 邮件转发开关
+        switchMail = findViewById(R.id.switchMail);
+        boolean mailEnabled = SecureEmailPreferences.isEmailEnabled(this);
+        switchMail.setChecked(mailEnabled);
+        switchMail.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            SecureEmailPreferences.setEmailEnabled(MainActivity.this, isChecked);
+            if (!isChecked) {
+                // 关闭邮件转发时断开 SMTP 连接以省电
+                PersistentTransport.close();
+            }
+            updateMailStatus();
+        });
+
         // 按钮：发送测试通知
         MaterialButton btnSendNotification = findViewById(R.id.button);
         btnSendNotification.setOnClickListener(v -> sendTestNotification());
@@ -125,12 +141,28 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
+        // 同步 LAN 开关状态（可能在其他页面被修改）
+        boolean lanEnabled = LanPreferences.isLanEnabled(this);
+        if (switchLan.isChecked() != lanEnabled) {
+            switchLan.setChecked(lanEnabled);
+        }
         updateMailStatus();
     }
 
     private void updateMailStatus() {
+        boolean mailEnabled = SecureEmailPreferences.isEmailEnabled(this);
         Session session = MailSessionManager.getSession();
-        if (session == null) {
+
+        // 同步邮件开关状态（可能从其他入口变更）
+        if (switchMail.isChecked() != mailEnabled) {
+            switchMail.setChecked(mailEnabled);
+        }
+
+        if (!mailEnabled) {
+            textViewMailStatus.setText("Disabled");
+            textViewMailStatus.setTextColor(ContextCompat.getColor(this,
+                    R.color.md_theme_light_on_surface_variant));
+        } else if (session == null) {
             textViewMailStatus.setText("Not configured");
             textViewMailStatus.setTextColor(ContextCompat.getColor(this, R.color.error));
         } else {

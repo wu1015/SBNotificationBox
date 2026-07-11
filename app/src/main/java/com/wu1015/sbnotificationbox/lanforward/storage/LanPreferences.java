@@ -105,7 +105,7 @@ public class LanPreferences {
     // === 局域网转发开关 ===
 
     public static boolean isLanEnabled(Context context) {
-        return getPrefs(context).getBoolean(KEY_LAN_ENABLED, true); // 默认开启
+        return getPrefs(context).getBoolean(KEY_LAN_ENABLED, false); // 默认关闭以省电
     }
 
     public static void setLanEnabled(Context context, boolean enabled) {

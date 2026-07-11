@@ -41,7 +41,7 @@
                     android:layout_marginBottom="12dp"
                     android:background="?attr/colorSurfaceVariant" />
 
-                <!-- 邮件状态 -->
+                <!-- 邮件状态 + 开关 -->
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -52,18 +52,24 @@
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:text="Mail Configuration"
+                        android:text="Mail Forward"
                         android:textAppearance="?attr/textAppearanceBodyMedium" />
 
                     <TextView
                         android:id="@+id/textView2"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:paddingHorizontal="8dp"
+                        android:layout_marginEnd="8dp"
+                        android:paddingHorizontal="4dp"
                         android:paddingVertical="4dp"
                         android:text="Not configured"
                         android:textAppearance="?attr/textAppearanceBodySmall"
                         android:textColor="?attr/colorOnSurfaceVariant" />
+
+                    <com.google.android.material.switchmaterial.SwitchMaterial
+                        android:id="@+id/switchMail"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content" />
                 </LinearLayout>
 
                 <!-- 局域网转发开关 + 状态 -->

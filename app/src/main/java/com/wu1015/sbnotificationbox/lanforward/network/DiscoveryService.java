@@ -270,6 +270,10 @@ public class DiscoveryService {
 
             // 指数退避重连
             if (running) {
+                // 重新获取本机 WiFi IP（网络可能已切换）
+                this.localWifiIp = getWifiIpAddress();
+                Log.i(TAG, "Current WiFi IP: " + localWifiIp);
+
                 backoffMs = Math.min(backoffMs == 0 ? 1000 : backoffMs * 2, 30000);
                 Log.i(TAG, "Reconnecting listen socket in " + backoffMs + "ms...");
                 try {

@@ -83,25 +83,27 @@ public class MyNotificationListenerService extends NotificationListenerService {
             return;
         }
 
-        // 异步发送邮件通知
-        String senderEmail = SecureEmailPreferences.getSenderEmail(getBaseContext());
-        String receiverEmail = SecureEmailPreferences.getReceiverEmail(getBaseContext());
+        // 异步发送邮件通知（仅在邮件转发开关打开且已配置邮箱时）
+        if (SecureEmailPreferences.isEmailEnabled(getBaseContext())) {
+            String senderEmail = SecureEmailPreferences.getSenderEmail(getBaseContext());
+            String receiverEmail = SecureEmailPreferences.getReceiverEmail(getBaseContext());
 
-        if (senderEmail != null && receiverEmail != null) {
-            String finalAppName = appName;
-            String finalTitle = title;
-            String finalText = text;
-            executor.execute(() -> {
-                try {
-                    boolean success = EmailSender.sendEmail2(
-                            senderEmail, receiverEmail,
-                            "Notification: " + finalAppName,
-                            finalTitle + "\n" + finalText);
-                    Log.d("NotificationEmail", "Send result: " + success);
-                } catch (Exception e) {
-                    Log.e("NotificationEmail", "Failed to send notification email", e);
-                }
-            });
+            if (senderEmail != null && receiverEmail != null) {
+                String finalAppName = appName;
+                String finalTitle = title;
+                String finalText = text;
+                executor.execute(() -> {
+                    try {
+                        boolean success = EmailSender.sendEmail2(
+                                senderEmail, receiverEmail,
+                                "Notification: " + finalAppName,
+                                finalTitle + "\n" + finalText);
+                        Log.d("NotificationEmail", "Send result: " + success);
+                    } catch (Exception e) {
+                        Log.e("NotificationEmail", "Failed to send notification email", e);
+                    }
+                });
+            }
         }
 
         // 转发通知到局域网设备（仅在开关打开且模式允许发送时）

@@ -46,8 +46,9 @@ public class LanManager {
 
     private static final String TAG = "LanManager";
     private static final int SERVER_PORT = 9877;
-    private static final long DEVICE_TIMEOUT_MS = 120000; // 120 秒无心跳 = 离线
+    private static final long DEVICE_TIMEOUT_MS = 180000; // 180 秒无心跳 = 可能离线（需 TCP 探测确认）
     private static final long HEALTH_CHECK_INTERVAL_MS = 30000; // 30 秒健康检查
+    private static final long RESTART_COOLDOWN_MS = 15000; // 15 秒重启冷却，防止健康检查级联重启
     private static volatile LanManager instance;
 
     private final Context appContext;
@@ -65,6 +66,7 @@ public class LanManager {
     private final AtomicBoolean networkReceiverRegistered = new AtomicBoolean(false);
 
     private volatile boolean serverRunning = false;
+    private long lastRestartTime = 0;
     private String deviceName;
 
     public interface LanStatusListener {
@@ -351,6 +353,15 @@ public class LanManager {
 
     private synchronized void restartServerIfNeeded() {
         if (!serverRunning) return;
+
+        // 冷却期检查：防止健康检查与网络变化事件级联触发多次重启
+        long now = System.currentTimeMillis();
+        if (now - lastRestartTime < RESTART_COOLDOWN_MS) {
+            Log.d(TAG, "Restart cooldown active, skipping");
+            return;
+        }
+        lastRestartTime = now;
+
         Log.i(TAG, "Restarting server components...");
 
         LanMode mode = LanPreferences.getLanMode(appContext);
@@ -432,13 +443,33 @@ public class LanManager {
         boolean changed = false;
         for (LanDevice device : deviceList) {
             if (device.isOnline() && (now - device.getLastSeen()) > DEVICE_TIMEOUT_MS) {
-                device.setOnline(false);
-                changed = true;
-                Log.d(TAG, "Device offline (timeout): " + device);
+                // 通过 TCP 探测确认离线，避免因 UDP 丢包导致误判
+                if (!probeDevice(device)) {
+                    device.setOnline(false);
+                    changed = true;
+                    Log.d(TAG, "Device offline (confirmed via TCP probe): " + device);
+                } else {
+                    // TCP 可达但 UDP 心跳丢失：刷新时间，保持在线
+                    device.setLastSeen(now);
+                    Log.d(TAG, "Device reachable via TCP, keeping online: " + device);
+                }
             }
         }
         if (changed) {
             notifyStatusChanged();
+        }
+    }
+
+    /** 通过 TCP 短连接探测设备是否可达 */
+    private boolean probeDevice(LanDevice device) {
+        try {
+            java.net.Socket probe = new java.net.Socket();
+            probe.connect(new java.net.InetSocketAddress(
+                    device.getIpAddress(), device.getPort()), 3000);
+            probe.close();
+            return true;
+        } catch (Exception e) {
+            return false;
         }
     }
 
@@ -547,28 +578,75 @@ public class LanManager {
 
     // === 设备管理（手动连接/断开） ===
 
-    /** 手动添加设备（持久化 + 加入列表） */
+    /** 手动添加设备（持久化 + 加入列表，随后异步 TCP 探测确认可达性） */
     public void addManualDevice(LanDevice device) {
+        boolean needsProbe = false;
+        LanDevice target;
+
         if (!deviceList.contains(device)) {
-            device.setOnline(true); // 手动添加默认在线（用户明确知道该设备）
+            device.setOnline(false); // 先标记离线，等 TCP 探测确认后再设为在线
             device.setLastSeen(System.currentTimeMillis());
             deviceList.add(device);
-            Log.d(TAG, "Manual device added: " + device);
+            target = device;
+            needsProbe = true;
+            Log.d(TAG, "Manual device added (pending probe): " + device);
         } else {
-            // 已在列表中，标记在线
+            // 已在列表中
             int idx = deviceList.indexOf(device);
             if (idx >= 0) {
-                deviceList.get(idx).setOnline(true);
-                deviceList.get(idx).setLastSeen(System.currentTimeMillis());
+                target = deviceList.get(idx);
+                target.setLastSeen(System.currentTimeMillis());
+                // 无论当前是否在线都重新探测，确保状态真实
+                needsProbe = true;
+                Log.d(TAG, "Manual device already in list, re-probing: " + target);
+            } else {
+                target = device;
             }
         }
-        // 总是持久化（即使设备已通过发现存在于列表中）
+
+        // 持久化（即使设备已通过发现存在于列表中）
         try {
             LanPreferences.addSavedDevice(appContext, device);
         } catch (Exception e) {
             Log.w(TAG, "Failed to persist device, but it's still in memory", e);
         }
         notifyStatusChanged();
+
+        // 异步 TCP 探测设备是否可达，确认后才标记在线
+        if (needsProbe && sendExecutor != null && !sendExecutor.isShutdown()) {
+            final LanDevice probeTarget = target;
+            sendExecutor.execute(() -> {
+                boolean reachable = probeDevice(probeTarget);
+                if (reachable) {
+                    probeTarget.setOnline(true);
+                    probeTarget.setLastSeen(System.currentTimeMillis());
+                    Log.d(TAG, "Device reachable via TCP probe: " + probeTarget);
+                } else {
+                    probeTarget.setOnline(false);
+                    Log.d(TAG, "Device unreachable via TCP probe: " + probeTarget);
+                }
+                notifyStatusChanged();
+            });
+        }
+    }
+
+    /**
+     * 同步 TCP 探测设备是否可达（阻塞，调用方负责在线程中执行）。
+     * 探测成功后更新设备状态。
+     *
+     * @return true = 可达，false = 不可达
+     */
+    public boolean probeAndUpdateDevice(LanDevice device) {
+        boolean reachable = probeDevice(device);
+        // 找到列表中对应的设备并更新状态
+        int idx = deviceList.indexOf(device);
+        if (idx >= 0) {
+            LanDevice existing = deviceList.get(idx);
+            existing.setOnline(reachable);
+            existing.setLastSeen(System.currentTimeMillis());
+            notifyStatusChanged();
+        }
+        return reachable;
     }
 
     /** TCP 消息到达时更新发送方 lastSeen（阻止超时离线） */

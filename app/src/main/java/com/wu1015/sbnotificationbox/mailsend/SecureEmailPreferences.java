@@ -8,8 +8,10 @@ import androidx.security.crypto.MasterKey;
 public class SecureEmailPreferences {
 
     private static final String PREF_NAME = "email_preferences";
+    private static final String PREF_NAME_PLAIN = "email_settings_plain";
     private static final String KEY_SENDER_EMAIL = "sender_email";
     private static final String KEY_RECEIVER_EMAIL = "receiver_email";
+    private static final String KEY_EMAIL_ENABLED = "email_forwarding_enabled";
 
     // 获取加密的 SharedPreferences 实例
     private static SharedPreferences getEncryptedPreferences(Context context) throws Exception {
@@ -61,6 +63,22 @@ public class SecureEmailPreferences {
             e.printStackTrace();
         }
         return null;
+    }
+
+    // === 邮件转发开关（明文存储，无需加密） ===
+
+    private static SharedPreferences getPlainPreferences(Context context) {
+        return context.getSharedPreferences(PREF_NAME_PLAIN, Context.MODE_PRIVATE);
+    }
+
+    /** 邮件转发是否启用（默认关闭以省电） */
+    public static boolean isEmailEnabled(Context context) {
+        return getPlainPreferences(context).getBoolean(KEY_EMAIL_ENABLED, false);
+    }
+
+    /** 设置邮件转发开关 */
+    public static void setEmailEnabled(Context context, boolean enabled) {
+        getPlainPreferences(context).edit().putBoolean(KEY_EMAIL_ENABLED, enabled).apply();
     }
 }
 

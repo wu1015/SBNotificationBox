@@ -15,6 +15,7 @@ import androidx.core.app.NotificationCompat;
 
 import com.wu1015.sbnotificationbox.MainActivity;
 import com.wu1015.sbnotificationbox.R;
+import com.wu1015.sbnotificationbox.lanforward.storage.LanPreferences;
 
 /**
  * 轻量级前台服务，保持 LAN 功能在后台持续运行。
@@ -55,8 +56,16 @@ public class LanKeepAliveService extends Service {
         startForeground(NOTIFICATION_ID, notification);
         Log.i(TAG, "Foreground notification started");
 
-        // 确保 LanManager 在运行
-        LanManager.getInstance(this).start();
+        // 仅在用户已开启 LAN 转发时才启动 LanManager。
+        // 系统因 START_STICKY 重启 service 时，如果用户已关闭开关则不再启动，
+        // 避免后台持续占用资源。
+        if (LanPreferences.isLanEnabled(this)) {
+            LanManager.getInstance(this).start();
+        } else {
+            Log.i(TAG, "LAN disabled by user, stopping self");
+            stopSelf();
+            return START_NOT_STICKY;
+        }
 
         // 如果 service 被 kill，系统会自动重启（粘性模式）
         return START_STICKY;
